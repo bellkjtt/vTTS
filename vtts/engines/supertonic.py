@@ -94,7 +94,8 @@ class SupertonicEngine(BaseTTSEngine):
             logger.debug(f"Synthesizing text ({len(request.text)} chars): {request.text[:50]}...")
             wav, duration = self.tts.synthesize(
                 text=request.text,
-                voice_style=voice_style
+                voice_style=voice_style,
+                lang=request.language  # 언어 파라미터 전달 (중요!)
             )
             
             logger.info(f"Synthesis complete: {duration:.2f}s audio generated")
