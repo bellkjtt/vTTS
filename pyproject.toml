@@ -88,8 +88,9 @@ Documentation = "https://vtts.readthedocs.io"
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["vtts"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vtts*"]
 
 [tool.black]
 line-length = 120
