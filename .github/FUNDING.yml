@@ -1,7 +1,7 @@
 # GitHub 스폰서 설정
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
 
-github: # GitHub 사용자명을 여기에 입력
+github: bellkjtt  # GitHub Sponsors 활성화 후 표시됩니다
 # patreon: # Patreon 사용자명
 # ko_fi: # Ko-fi 사용자명
 # tidelift: # Tidelift 패키지명
