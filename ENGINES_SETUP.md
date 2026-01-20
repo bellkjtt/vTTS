@@ -2,6 +2,40 @@
 
 vTTS는 여러 TTS/STT 엔진을 지원합니다. 각 엔진은 독립적으로 설치할 수 있습니다.
 
+## 🚀 빠른 설치
+
+### 모든 엔진 한 번에 설치 (권장)
+```bash
+# 1. 모든 dependency 설치
+pip install "vtts[all]"
+
+# 2. 필요한 엔진 저장소 클론
+# CosyVoice
+git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
+export PYTHONPATH="$PWD/CosyVoice:$PYTHONPATH"
+
+# GPT-SoVITS
+git clone https://github.com/RVC-Boss/GPT-SoVITS.git
+export PYTHONPATH="$PWD/GPT-SoVITS:$PYTHONPATH"
+
+# 3. 서버 시작 (원하는 모델 선택)
+vtts serve Supertone/supertonic-2  # 또는 다른 모델
+```
+
+### 개별 엔진 설치
+```bash
+# Supertonic-2만
+pip install "vtts[supertonic]"
+
+# CosyVoice만
+pip install "vtts[cosyvoice]"
+
+# GPT-SoVITS만
+pip install "vtts[gptsovits]"
+```
+
+---
+
 ## 🎙️ TTS 엔진
 
 ### 1. Supertonic-2 (추천 - 가장 간단) ⭐
@@ -38,7 +72,26 @@ vtts serve Supertone/supertonic-2 --port 8000
 - 1.5B 파라미터
 - 스트리밍 지원
 
-**설치**:
+**설치** (2가지 방법):
+
+**방법 A: 자동 설치 (권장)** ✅
+```bash
+# 1. vTTS와 CosyVoice dependency 설치
+pip install "vtts[cosyvoice]"
+
+# 2. CosyVoice 저장소 클론 (필수)
+git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
+cd CosyVoice
+
+# 3. PYTHONPATH 설정
+export PYTHONPATH="$PWD:$PYTHONPATH"  # Linux/Mac
+# Windows: set PYTHONPATH=%CD%;%PYTHONPATH%
+
+# 4. vTTS 서버 시작
+vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512
+```
+
+**방법 B: 수동 설치**
 ```bash
 # 1. CosyVoice 저장소 클론
 git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
@@ -92,7 +145,26 @@ audio = client.tts(
 - 5개 언어 (zh, en, ja, ko, yue)
 - 매우 자연스러운 음성
 
-**설치**:
+**설치** (2가지 방법):
+
+**방법 A: 자동 설치 (권장)** ✅
+```bash
+# 1. vTTS와 GPT-SoVITS dependency 설치
+pip install "vtts[gptsovits]"
+
+# 2. GPT-SoVITS 저장소 클론 (필수)
+git clone https://github.com/RVC-Boss/GPT-SoVITS.git
+cd GPT-SoVITS
+
+# 3. PYTHONPATH 설정
+export PYTHONPATH="$PWD:$PYTHONPATH"  # Linux/Mac
+# Windows: set PYTHONPATH=%CD%;%PYTHONPATH%
+
+# 4. vTTS 서버 시작
+vtts serve kevinwang676/GPT-SoVITS-v3
+```
+
+**방법 B: 수동 설치**
 ```bash
 # 1. GPT-SoVITS 저장소 클론
 git clone https://github.com/RVC-Boss/GPT-SoVITS.git

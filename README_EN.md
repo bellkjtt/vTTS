@@ -34,14 +34,34 @@
 
 ### Installation
 
-#### Install from GitHub (Current)
+#### Basic Installation
 ```bash
+# Install from GitHub (includes Supertonic-2 + Faster-Whisper)
 pip install git+https://github.com/bellkjtt/vTTS.git
+pip install supertonic
 ```
 
-#### Install from PyPI (Coming Soon)
+#### Install All Engines (Recommended)
 ```bash
-pip install vtts
+# 1. Install all dependencies
+pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 2. Clone repositories for advanced engines (optional)
+git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
+git clone https://github.com/RVC-Boss/GPT-SoVITS.git
+export PYTHONPATH="$PWD/CosyVoice:$PWD/GPT-SoVITS:$PYTHONPATH"
+```
+
+#### Install Individual Engines
+```bash
+# Supertonic-2 only
+pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# CosyVoice only
+pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# GPT-SoVITS only
+pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
 ```
 
 #### Test on Kaggle

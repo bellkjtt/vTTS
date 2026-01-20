@@ -67,13 +67,52 @@ dev = [
 
 # TTS Engines (선택적 설치)
 supertonic = [
-    "supertonic>=0.1.0",  # Supertonic-2 TTS
+    "supertonic>=0.1.0",
 ]
 
-# All TTS engines (Supertonic만, 나머지는 수동 설치)
+cosyvoice = [
+    "modelscope>=1.9.0",
+    "HyperPyYAML>=1.2.0",
+    "conformer>=0.3.0",
+    "wetext>=0.0.4",
+    "x-transformers>=2.11.0",
+    "diffusers>=0.29.0",
+]
+
+gptsovits = [
+    "funasr>=1.0.27",
+    "peft>=0.10.0,<0.18.0",
+    "g2p_en",
+    "pyopenjtalk>=0.4.1",
+    "cn2an",
+    "pypinyin",
+    "sentencepiece",
+    "jieba",
+    "fast_langdetect>=0.3.1",
+    "g2pk2",
+    "ko_pron",
+]
+
+# All TTS engines
 all = [
     "supertonic>=0.1.0",
-    "modelscope>=1.9.0",  # CosyVoice용 (수동 설치 필요)
+    "modelscope>=1.9.0",
+    "HyperPyYAML>=1.2.0",
+    "conformer>=0.3.0",
+    "wetext>=0.0.4",
+    "x-transformers>=2.11.0",
+    "diffusers>=0.29.0",
+    "funasr>=1.0.27",
+    "peft>=0.10.0,<0.18.0",
+    "g2p_en",
+    "pyopenjtalk>=0.4.1",
+    "cn2an",
+    "pypinyin",
+    "sentencepiece",
+    "jieba",
+    "fast_langdetect>=0.3.1",
+    "g2pk2",
+    "ko_pron",
 ]
 
 [project.scripts]

@@ -34,14 +34,34 @@
 
 ### 설치
 
-#### GitHub에서 설치 (현재)
+#### 기본 설치
 ```bash
+# GitHub에서 설치 (Supertonic-2 + Faster-Whisper 포함)
 pip install git+https://github.com/bellkjtt/vTTS.git
+pip install supertonic
 ```
 
-#### PyPI에서 설치 (곧 제공)
+#### 모든 엔진 설치 (권장)
 ```bash
-pip install vtts
+# 1. 모든 dependency 설치
+pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 2. 고급 엔진 사용을 위한 저장소 클론 (선택)
+git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
+git clone https://github.com/RVC-Boss/GPT-SoVITS.git
+export PYTHONPATH="$PWD/CosyVoice:$PWD/GPT-SoVITS:$PYTHONPATH"
+```
+
+#### 개별 엔진 설치
+```bash
+# Supertonic-2만
+pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# CosyVoice만  
+pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# GPT-SoVITS만
+pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
 ```
 
 #### Kaggle에서 테스트
