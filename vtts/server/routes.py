@@ -95,6 +95,7 @@ async def create_speech(
             language=tts_request.language or "ko",
             voice=tts_request.voice,
             speed=tts_request.speed,
+            reference_audio=tts_request.reference_audio,
             reference_text=tts_request.reference_text,
             stream=False
         )
