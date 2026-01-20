@@ -19,28 +19,44 @@ classifiers = [
 ]
 
 dependencies = [
+    # FastAPI Server
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
+    "python-multipart>=0.0.9",
+    
+    # CLI & Utilities
     "click>=8.1.0",
     "httpx>=0.26.0",
-    "huggingface-hub>=0.20.0",
+    "rich>=13.0.0",
+    "loguru>=0.7.0",
+    
+    # ML & Audio Processing
     "torch>=2.0.0",
     "torchaudio>=2.0.0",
     "numpy>=1.24.0",
     "soundfile>=0.12.0",
     "librosa>=0.10.0",
+    "pydub>=0.25.0",
+    
+    # HuggingFace
+    "huggingface-hub>=0.20.0",
+    "transformers>=4.30.0",
+    
+    # ONNX Runtime
     "onnxruntime-gpu>=1.17.0; platform_machine == 'x86_64'",
     "onnxruntime>=1.17.0; platform_machine != 'x86_64'",
+    
+    # OpenAI SDK (for client)
     "openai>=1.0.0",
-    "rich>=13.0.0",
-    "loguru>=0.7.0",
+    
+    # STT Engine (기본 포함)
     "faster-whisper>=1.0.0",
-    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
+# Development tools
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
@@ -48,9 +64,16 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.5.0",
 ]
+
+# TTS Engines (선택적 설치)
+supertonic = [
+    "supertonic>=0.1.0",  # Supertonic-2 TTS
+]
+
+# All TTS engines (Supertonic만, 나머지는 수동 설치)
 all = [
-    "supertonic>=0.1.0",  # Supertonic-2
-    # CosyVoice와 GPT-SoVITS는 별도 설치 필요
+    "supertonic>=0.1.0",
+    "modelscope>=1.9.0",  # CosyVoice용 (수동 설치 필요)
 ]
 
 [project.scripts]
