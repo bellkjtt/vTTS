@@ -1,0 +1,26 @@
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+# 기본 패키지 설치
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 작업 디렉토리
+WORKDIR /app
+
+# Python 패키지 설치
+COPY pyproject.toml .
+RUN pip3 install --no-cache-dir -e .
+
+# 앱 복사
+COPY . .
+
+# 포트 노출
+EXPOSE 8000
+
+# 엔트리포인트
+ENTRYPOINT ["vtts"]
+CMD ["--help"]

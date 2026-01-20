@@ -1,0 +1,83 @@
+[project]
+name = "vtts"
+version = "0.1.0"
+description = "Universal TTS Serving System - vLLM for Text-to-Speech"
+authors = [
+    {name = "vTTS Contributors"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+keywords = ["tts", "text-to-speech", "serving", "huggingface", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "click>=8.1.0",
+    "httpx>=0.26.0",
+    "huggingface-hub>=0.20.0",
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "numpy>=1.24.0",
+    "soundfile>=0.12.0",
+    "librosa>=0.10.0",
+    "onnxruntime-gpu>=1.17.0; platform_machine == 'x86_64'",
+    "onnxruntime>=1.17.0; platform_machine != 'x86_64'",
+    "openai>=1.0.0",
+    "rich>=13.0.0",
+    "loguru>=0.7.0",
+    "faster-whisper>=1.0.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+all = [
+    "supertonic>=0.1.0",  # Supertonic-2
+    # CosyVoice와 GPT-SoVITS는 별도 설치 필요
+]
+
+[project.scripts]
+vtts = "vtts.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/vtts/vtts"
+Repository = "https://github.com/vtts/vtts"
+Documentation = "https://vtts.readthedocs.io"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["vtts"]
+
+[tool.black]
+line-length = 120
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
