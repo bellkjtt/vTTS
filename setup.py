@@ -9,7 +9,7 @@ long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="vtts",
-    version="0.1.0",
+    version="0.1.0-beta",
     author="vTTS Contributors",
     author_email="",
     description="Universal TTS/STT Serving System - vLLM for Speech",

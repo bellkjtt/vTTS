@@ -1,6 +1,6 @@
 [project]
 name = "vtts"
-version = "0.1.0"
+version = "0.1.0-beta"
 description = "Universal TTS Serving System - vLLM for Text-to-Speech"
 authors = [
     {name = "vTTS Contributors"}

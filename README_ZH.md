@@ -1,9 +1,10 @@
 # vTTS - 通用 TTS/STT 服务系统
 
-[![GitHub release](https://img.shields.io/github/v/release/bellkjtt/vTTS)](https://github.com/bellkjtt/vTTS/releases)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta-orange.svg)](https://github.com/bellkjtt/vTTS/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/bellkjtt)](https://github.com/sponsors/bellkjtt)
+[![Status](https://img.shields.io/badge/status-beta-yellow.svg)](https://github.com/bellkjtt/vTTS)
 
 **语音领域的 vLLM** - 从 Huggingface 自动下载模型的通用 TTS/STT 服务系统
 
