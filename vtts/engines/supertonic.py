@@ -1,10 +1,19 @@
-"""Supertonic-2 TTS Engine - Real Implementation"""
+"""Supertonic-2 TTS Engine - ONNX Direct Inference
 
+다국어 지원 (en, ko, es, pt, fr)을 위해 내장된 ONNX 추론 모듈 사용.
+PyPI supertonic 패키지 대신 GitHub 소스 기반 구현.
+
+Reference: https://github.com/supertone-inc/supertonic
+Model: https://huggingface.co/Supertone/supertonic-2
+"""
+
+import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import torch
+from huggingface_hub import hf_hub_download, snapshot_download
 from loguru import logger
 
 from vtts.engines.base import BaseTTSEngine, TTSOutput, TTSRequest
@@ -18,24 +27,27 @@ class SupertonicEngine(BaseTTSEngine):
     Supported languages: en (English), ko (Korean), es (Spanish), pt (Portuguese), fr (French)
     Voice styles: M1, M2, M3, M4, F1, F2, F3, F4
     
-    Note: The PyPI supertonic package may not support all languages yet.
-    For full multilingual support, use the ONNX models directly.
+    Uses built-in ONNX inference module for full multilingual support.
     
     Reference: https://github.com/supertone-inc/supertonic
     """
     
-    # 공식 voice styles (https://github.com/supertone-inc/supertonic)
+    # 공식 voice styles
     VOICE_STYLES = ["M1", "M2", "M3", "M4", "F1", "F2", "F3", "F4"]
     
     # Supertonic 2는 5개 언어 지원
     SUPPORTED_LANGS = ["en", "ko", "es", "pt", "fr"]
+    
+    # HuggingFace 모델 ID
+    HF_MODEL_ID = "Supertone/supertonic-2"
     
     def __init__(self, model_id: str = "Supertone/supertonic-2", **kwargs):
         super().__init__(model_id, **kwargs)
         self._supported_languages = self.SUPPORTED_LANGS
         self._sample_rate = 24000  # Supertonic-2 uses 24kHz
         self.tts = None
-        self._use_pypi_package = True  # PyPI 패키지 사용 여부
+        self._model_dir = None
+        self._voice_styles_cache = {}
         
     def load_model(self) -> None:
         """모델을 로드합니다."""
@@ -47,32 +59,64 @@ class SupertonicEngine(BaseTTSEngine):
         logger.info("This will download ~260MB of model assets on first run")
         
         try:
-            from supertonic import TTS
+            # HuggingFace에서 모델 다운로드
+            logger.info("Downloading model from HuggingFace...")
+            self._model_dir = snapshot_download(
+                repo_id=self.HF_MODEL_ID,
+                allow_patterns=["onnx/*", "voice_styles/*", "config.json"],
+            )
+            logger.info(f"Model downloaded to: {self._model_dir}")
             
-            # Supertonic TTS 초기화 (자동 다운로드)
-            self.tts = TTS(auto_download=True)
+            # ONNX 디렉토리 경로
+            onnx_dir = os.path.join(self._model_dir, "onnx")
+            
+            # 내장 모듈로 TTS 로드
+            from vtts.engines._supertonic.helper import load_text_to_speech
+            
+            self.tts = load_text_to_speech(onnx_dir, use_gpu=False)
             self.is_loaded = True
             
             logger.info(f"Successfully loaded Supertonic model: {self.model_id}")
             logger.info(f"Available voice styles: {', '.join(self.VOICE_STYLES)}")
+            logger.info(f"Supported languages: {', '.join(self.SUPPORTED_LANGS)}")
             
         except ImportError as e:
-            logger.error(
-                "Supertonic package not installed. "
-                "Install with: pip install supertonic"
-            )
+            logger.error(f"Failed to import ONNX modules: {e}")
+            logger.error("Install with: pip install onnxruntime")
             raise ImportError(
-                "supertonic package required. Install with: pip install supertonic"
+                "onnxruntime package required. Install with: pip install onnxruntime"
             ) from e
         except Exception as e:
             logger.error(f"Failed to load Supertonic model: {e}")
             raise
+    
+    def _get_voice_style(self, voice_name: str):
+        """Voice style을 로드합니다."""
+        if voice_name in self._voice_styles_cache:
+            return self._voice_styles_cache[voice_name]
+        
+        from vtts.engines._supertonic.helper import load_voice_style
+        
+        voice_style_path = os.path.join(
+            self._model_dir, "voice_styles", f"{voice_name}.json"
+        )
+        
+        if not os.path.exists(voice_style_path):
+            logger.warning(f"Voice style {voice_name} not found, using M1")
+            voice_style_path = os.path.join(
+                self._model_dir, "voice_styles", "M1.json"
+            )
+        
+        style = load_voice_style([voice_style_path], verbose=False)
+        self._voice_styles_cache[voice_name] = style
+        return style
     
     def unload_model(self) -> None:
         """모델을 언로드합니다."""
         if self.tts is not None:
             del self.tts
             self.tts = None
+            self._voice_styles_cache.clear()
             self.is_loaded = False
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -88,7 +132,7 @@ class SupertonicEngine(BaseTTSEngine):
         
         # 언어 확인
         lang = request.language if request.language in self.SUPPORTED_LANGS else "en"
-        if request.language not in self.SUPPORTED_LANGS:
+        if request.language and request.language not in self.SUPPORTED_LANGS:
             logger.warning(
                 f"Language '{request.language}' not supported. "
                 f"Supported: {self.SUPPORTED_LANGS}. Using 'en' instead."
@@ -100,20 +144,26 @@ class SupertonicEngine(BaseTTSEngine):
         
         try:
             # Voice style 가져오기
-            voice_style = self.tts.get_voice_style(voice_name=voice_name)
+            voice_style = self._get_voice_style(voice_name)
             
-            # 음성 합성
+            # 음성 합성 (내장 모듈 사용 - lang 파라미터로 언어 지정)
             logger.debug(f"Synthesizing text ({len(request.text)} chars): {request.text[:50]}...")
             
-            # 텍스트에 언어 태그 추가 (Supertonic 2 다국어 지원)
-            # PyPI 패키지가 아직 lang 파라미터를 지원하지 않으므로
-            # 텍스트에 직접 언어 태그를 추가
-            tagged_text = f"<{lang}>{request.text}</{lang}>"
+            # 속도 조정 (기본값 1.05)
+            speed = request.speed if request.speed else 1.0
             
-            wav, duration = self.tts.synthesize(
-                text=tagged_text,
-                voice_style=voice_style
+            # ONNX 직접 추론 (lang 파라미터 사용)
+            wav, duration = self.tts(
+                text=request.text,
+                lang=lang,
+                style=voice_style,
+                total_step=5,  # 기본 inference steps
+                speed=speed,
             )
+            
+            # duration이 배열인 경우 스칼라로 변환
+            if isinstance(duration, np.ndarray):
+                duration = float(duration.item() if duration.size == 1 else duration[0])
             
             logger.info(f"Synthesis complete: {duration:.2f}s audio generated")
             
@@ -121,24 +171,29 @@ class SupertonicEngine(BaseTTSEngine):
             if not isinstance(wav, np.ndarray):
                 wav = np.array(wav)
             
-            # float32 to float (vTTS 표준)
+            # 1D로 변환 (배치 차원 제거)
+            if wav.ndim > 1:
+                wav = wav.squeeze()
+            
+            # float32로 변환
             if wav.dtype != np.float32:
                 wav = wav.astype(np.float32)
             
             # 정규화 (-1.0 ~ 1.0)
-            if wav.max() > 1.0 or wav.min() < -1.0:
-                wav = wav / max(abs(wav.max()), abs(wav.min()))
+            max_val = max(abs(wav.max()), abs(wav.min()))
+            if max_val > 1.0:
+                wav = wav / max_val
             
             return TTSOutput(
                 audio=wav,
                 sample_rate=self._sample_rate,
                 metadata={
                     "model": self.model_id,
-                    "language": request.language,
+                    "language": lang,
                     "voice_style": voice_name,
-                    "speed": request.speed,
+                    "speed": speed,
                     "duration": duration,
-                    "engine": "supertonic"
+                    "engine": "supertonic-onnx"
                 }
             )
             
@@ -147,10 +202,13 @@ class SupertonicEngine(BaseTTSEngine):
             error_traceback = traceback.format_exc()
             logger.error(f"Synthesis failed: {e}")
             logger.error(f"Traceback:\n{error_traceback}")
-            raise RuntimeError(f"Supertonic synthesis failed: {e}\n\nTraceback:\n{error_traceback}") from e
+            raise RuntimeError(f"Supertonic synthesis failed: {e}") from e
     
     def _map_voice_to_style(self, voice: str) -> str:
         """Voice ID를 Supertonic voice style로 매핑합니다."""
+        if not voice:
+            return "M1"
+            
         # voice가 이미 valid style이면 그대로 사용
         voice_upper = voice.upper()
         if voice_upper in self.VOICE_STYLES:

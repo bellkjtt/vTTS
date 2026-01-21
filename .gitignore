@@ -57,3 +57,8 @@ Thumbs.db
 # Test outputs
 output_*
 test_*
+
+# Third party sources (downloaded separately)
+third_party/
+supertonic-repo/
+*.zip

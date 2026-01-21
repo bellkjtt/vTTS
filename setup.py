@@ -62,7 +62,9 @@ setup(
             "mypy>=1.5.0",
         ],
         "supertonic": [
-            "supertonic>=0.1.0",
+            # 내장 ONNX 추론 모듈 사용 (다국어 지원: en, ko, es, pt, fr)
+            # PyPI supertonic 패키지 불필요 - vTTS에 포함됨
+            "onnxruntime>=1.16.0",
         ],
         "cosyvoice": [
             "modelscope>=1.9.0",
@@ -86,7 +88,7 @@ setup(
             "ko_pron",
         ],
         "all": [
-            "supertonic>=0.1.0",
+            "onnxruntime>=1.16.0",
             "modelscope>=1.9.0",
             "HyperPyYAML>=1.2.0",
             "conformer>=0.3.0",
