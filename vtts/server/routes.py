@@ -141,8 +141,11 @@ async def create_speech(
         )
         
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
         logger.error(f"Synthesis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Traceback:\n{error_traceback}")
+        raise HTTPException(status_code=500, detail=f"{str(e)}\n\nTraceback:\n{error_traceback}")
 
 
 @router.get("/")

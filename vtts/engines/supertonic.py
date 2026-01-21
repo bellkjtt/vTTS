@@ -13,21 +13,29 @@ from vtts.engines.base import BaseTTSEngine, TTSOutput, TTSRequest
 class SupertonicEngine(BaseTTSEngine):
     """Supertonic-2 TTS Engine
     
-    Lightning-fast on-device TTS supporting 5 languages.
-    Uses official supertonic Python package with ONNX Runtime.
+    Lightning-fast on-device TTS via ONNX Runtime.
     
-    Supported languages: en, ko, es, pt, fr
+    Supported languages: en (English), ko (Korean), es (Spanish), pt (Portuguese), fr (French)
     Voice styles: M1, M2, M3, M4, F1, F2, F3, F4
+    
+    Note: The PyPI supertonic package may not support all languages yet.
+    For full multilingual support, use the ONNX models directly.
+    
+    Reference: https://github.com/supertone-inc/supertonic
     """
     
     # 공식 voice styles (https://github.com/supertone-inc/supertonic)
     VOICE_STYLES = ["M1", "M2", "M3", "M4", "F1", "F2", "F3", "F4"]
     
+    # Supertonic 2는 5개 언어 지원
+    SUPPORTED_LANGS = ["en", "ko", "es", "pt", "fr"]
+    
     def __init__(self, model_id: str = "Supertone/supertonic-2", **kwargs):
         super().__init__(model_id, **kwargs)
-        self._supported_languages = ["en", "ko", "es", "pt", "fr"]
+        self._supported_languages = self.SUPPORTED_LANGS
         self._sample_rate = 24000  # Supertonic-2 uses 24kHz
         self.tts = None
+        self._use_pypi_package = True  # PyPI 패키지 사용 여부
         
     def load_model(self) -> None:
         """모델을 로드합니다."""
@@ -71,20 +79,24 @@ class SupertonicEngine(BaseTTSEngine):
             logger.info(f"Unloaded model: {self.model_id}")
     
     def synthesize(self, request: TTSRequest) -> TTSOutput:
-        """음성을 합성합니다."""
+        """음성을 합성합니다.
+        
+        Supertonic 2는 5개 언어를 지원합니다: en, ko, es, pt, fr
+        """
         if not self.is_loaded:
             self.load_model()
         
         # 언어 확인
-        if request.language not in self._supported_languages:
+        lang = request.language if request.language in self.SUPPORTED_LANGS else "en"
+        if request.language not in self.SUPPORTED_LANGS:
             logger.warning(
-                f"Language '{request.language}' not officially supported. "
-                f"Supported: {self._supported_languages}. Will attempt synthesis anyway."
+                f"Language '{request.language}' not supported. "
+                f"Supported: {self.SUPPORTED_LANGS}. Using 'en' instead."
             )
         
         # Voice style 매핑
         voice_name = self._map_voice_to_style(request.voice)
-        logger.info(f"Using voice style: {voice_name}")
+        logger.info(f"Using voice style: {voice_name}, language: {lang}")
         
         try:
             # Voice style 가져오기
@@ -92,10 +104,15 @@ class SupertonicEngine(BaseTTSEngine):
             
             # 음성 합성
             logger.debug(f"Synthesizing text ({len(request.text)} chars): {request.text[:50]}...")
+            
+            # 텍스트에 언어 태그 추가 (Supertonic 2 다국어 지원)
+            # PyPI 패키지가 아직 lang 파라미터를 지원하지 않으므로
+            # 텍스트에 직접 언어 태그를 추가
+            tagged_text = f"<{lang}>{request.text}</{lang}>"
+            
             wav, duration = self.tts.synthesize(
-                text=request.text,
-                voice_style=voice_style,
-                lang=request.language  # 언어 파라미터 전달 (중요!)
+                text=tagged_text,
+                voice_style=voice_style
             )
             
             logger.info(f"Synthesis complete: {duration:.2f}s audio generated")
@@ -126,8 +143,11 @@ class SupertonicEngine(BaseTTSEngine):
             )
             
         except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
             logger.error(f"Synthesis failed: {e}")
-            raise RuntimeError(f"Supertonic synthesis failed: {e}") from e
+            logger.error(f"Traceback:\n{error_traceback}")
+            raise RuntimeError(f"Supertonic synthesis failed: {e}\n\nTraceback:\n{error_traceback}") from e
     
     def _map_voice_to_style(self, voice: str) -> str:
         """Voice ID를 Supertonic voice style로 매핑합니다."""
