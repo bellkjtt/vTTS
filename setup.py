@@ -1,4 +1,14 @@
-"""Setup script for vTTS"""
+"""Setup script for vTTS
+
+의존성 관리 전략:
+- 기본 의존성: 모든 엔진 공통 (torch, fastapi 등)
+- 엔진별 extras: 충돌 방지를 위해 분리
+- 버전 pinning: 호환성 보장
+
+Docker 사용 권장:
+- 여러 엔진 동시 사용 시 Docker 컨테이너 분리 권장
+- 각 엔진별 Dockerfile 제공: docker/Dockerfile.{engine}
+"""
 
 from setuptools import setup, find_packages
 from pathlib import Path
@@ -7,6 +17,87 @@ from pathlib import Path
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
+# ============================================================
+# 공통 의존성 (버전 범위 명시로 충돌 최소화)
+# ============================================================
+CORE_DEPS = [
+    # Web Framework
+    "fastapi>=0.109.0,<1.0.0",
+    "uvicorn[standard]>=0.27.0,<1.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+    "pydantic-settings>=2.0.0,<3.0.0",
+    
+    # HTTP Client
+    "httpx>=0.26.0,<1.0.0",
+    "python-multipart>=0.0.9,<1.0.0",
+    
+    # CLI & Logging
+    "click>=8.1.0,<9.0.0",
+    "rich>=13.0.0,<14.0.0",
+    "loguru>=0.7.0,<1.0.0",
+    
+    # ML Core (버전 범위 넓게 - 엔진별 호환성)
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "numpy>=1.24.0,<2.0.0",  # numpy 2.0 호환성 이슈 방지
+    
+    # Audio Processing
+    "soundfile>=0.12.0,<1.0.0",
+    "librosa>=0.10.0,<1.0.0",
+    
+    # HuggingFace
+    "huggingface-hub>=0.20.0,<1.0.0",
+    
+    # OpenAI Compatible API
+    "openai>=1.0.0,<2.0.0",
+]
+
+# STT 의존성 (기본 포함)
+STT_DEPS = [
+    "faster-whisper>=1.0.0,<2.0.0",
+]
+
+# ============================================================
+# 엔진별 의존성 (격리)
+# ============================================================
+
+# Supertonic: ONNX 기반, 가벼움
+SUPERTONIC_DEPS = [
+    "onnxruntime>=1.16.0,<2.0.0",
+]
+
+SUPERTONIC_CUDA_DEPS = [
+    "onnxruntime-gpu>=1.16.0,<2.0.0",
+]
+
+# CosyVoice: ModelScope 기반
+COSYVOICE_DEPS = [
+    "modelscope>=1.9.0,<2.0.0",
+    "HyperPyYAML>=1.2.0,<2.0.0",
+    "conformer>=0.3.0,<1.0.0",
+    "wetext>=0.0.4",
+    "x-transformers>=2.11.0,<3.0.0",
+    "diffusers>=0.29.0,<1.0.0",
+]
+
+# GPT-SoVITS: 가장 복잡한 의존성
+GPTSOVITS_DEPS = [
+    "funasr>=1.0.27,<2.0.0",
+    "peft>=0.10.0,<0.18.0",  # 버전 범위 제한 중요!
+    "g2p_en>=2.1.0",
+    "pyopenjtalk>=0.4.1",
+    "cn2an>=0.5.0",
+    "pypinyin>=0.50.0",
+    "sentencepiece>=0.1.99",
+    "jieba>=0.42.1",
+    "fast_langdetect>=0.3.1",
+    "g2pk2>=0.0.3",
+    "ko_pron>=1.0.0",
+]
+
+# ============================================================
+# Setup
+# ============================================================
 setup(
     name="vtts",
     version="0.1.0-beta",
@@ -33,27 +124,12 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Multimedia :: Sound/Audio :: Speech",
     ],
-    python_requires=">=3.10",
-    install_requires=[
-        "fastapi>=0.109.0",
-        "uvicorn[standard]>=0.27.0",
-        "pydantic>=2.0.0",
-        "pydantic-settings>=2.0.0",
-        "click>=8.1.0",
-        "httpx>=0.26.0",
-        "huggingface-hub>=0.20.0",
-        "torch>=2.0.0",
-        "torchaudio>=2.0.0",
-        "numpy>=1.24.0",
-        "soundfile>=0.12.0",
-        "librosa>=0.10.0",
-        "openai>=1.0.0",
-        "rich>=13.0.0",
-        "loguru>=0.7.0",
-        "faster-whisper>=1.0.0",
-        "python-multipart>=0.0.9",
-    ],
+    python_requires=">=3.10,<3.13",  # Python 3.13 아직 미지원
+    
+    install_requires=CORE_DEPS + STT_DEPS,
+    
     extras_require={
+        # 개발용
         "dev": [
             "pytest>=7.4.0",
             "pytest-asyncio>=0.21.0",
@@ -61,62 +137,29 @@ setup(
             "ruff>=0.1.0",
             "mypy>=1.5.0",
         ],
-        "supertonic": [
-            # 내장 ONNX 추론 모듈 사용 (다국어 지원: en, ko, es, pt, fr)
-            # PyPI supertonic 패키지 불필요 - vTTS에 포함됨
-            "onnxruntime>=1.16.0",
-        ],
-        "supertonic-cuda": [
-            # Supertonic with CUDA support
-            "onnxruntime-gpu>=1.16.0",
-        ],
-        "cuda": [
-            # CUDA 지원 (onnxruntime-gpu)
-            "onnxruntime-gpu>=1.16.0",
-        ],
-        "cosyvoice": [
-            "modelscope>=1.9.0",
-            "HyperPyYAML>=1.2.0",
-            "conformer>=0.3.0",
-            "wetext>=0.0.4",
-            "x-transformers>=2.11.0",
-            "diffusers>=0.29.0",
-        ],
-        "gptsovits": [
-            "funasr>=1.0.27",
-            "peft>=0.10.0,<0.18.0",
-            "g2p_en",
-            "pyopenjtalk>=0.4.1",
-            "cn2an",
-            "pypinyin",
-            "sentencepiece",
-            "jieba",
-            "fast_langdetect>=0.3.1",
-            "g2pk2",
-            "ko_pron",
-        ],
-        "all": [
-            # CUDA 지원 포함 (GPU 없어도 CPU로 동작)
-            "onnxruntime-gpu>=1.16.0",
-            "modelscope>=1.9.0",
-            "HyperPyYAML>=1.2.0",
-            "conformer>=0.3.0",
-            "wetext>=0.0.4",
-            "x-transformers>=2.11.0",
-            "diffusers>=0.29.0",
-            "funasr>=1.0.27",
-            "peft>=0.10.0,<0.18.0",
-            "g2p_en",
-            "pyopenjtalk>=0.4.1",
-            "cn2an",
-            "pypinyin",
-            "sentencepiece",
-            "jieba",
-            "fast_langdetect>=0.3.1",
-            "g2pk2",
-            "ko_pron",
-        ],
+        
+        # ============================================================
+        # 개별 엔진 (권장: 하나씩만 설치)
+        # ============================================================
+        "supertonic": SUPERTONIC_DEPS,
+        "supertonic-cuda": SUPERTONIC_CUDA_DEPS,
+        "cosyvoice": COSYVOICE_DEPS,
+        "gptsovits": GPTSOVITS_DEPS,
+        
+        # ============================================================
+        # 조합 (충돌 가능성 있음 - Docker 권장)
+        # ============================================================
+        
+        # Supertonic + CosyVoice (비교적 안전)
+        "supertonic-cosyvoice": SUPERTONIC_CUDA_DEPS + COSYVOICE_DEPS,
+        
+        # 전체 설치 (충돌 가능 - Docker 강력 권장!)
+        "all": SUPERTONIC_CUDA_DEPS + COSYVOICE_DEPS + GPTSOVITS_DEPS,
+        
+        # CUDA 지원
+        "cuda": SUPERTONIC_CUDA_DEPS,
     },
+    
     entry_points={
         "console_scripts": [
             "vtts=vtts.cli:main",

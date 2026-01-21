@@ -1,0 +1,88 @@
+# ============================================================
+# vTTS - Supertonic Engine Docker Image
+# ============================================================
+# 가장 가벼운 TTS 엔진 (ONNX 기반)
+# 
+# Build:
+#   docker build -f docker/Dockerfile.supertonic -t vtts:supertonic .
+#
+# Run:
+#   docker run -p 8000:8000 --gpus all vtts:supertonic
+# ============================================================
+
+FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
+
+LABEL maintainer="vTTS Contributors"
+LABEL description="vTTS with Supertonic TTS Engine (ONNX, Multilingual)"
+LABEL engine="supertonic"
+
+# ============================================================
+# 환경 변수
+# ============================================================
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# HuggingFace 캐시 디렉토리
+ENV HF_HOME=/root/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/root/.cache/huggingface
+
+# ============================================================
+# 시스템 패키지 설치
+# ============================================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python
+
+# pip 업그레이드
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+
+# ============================================================
+# 작업 디렉토리
+# ============================================================
+WORKDIR /app
+
+# ============================================================
+# Python 의존성 설치 (레이어 캐싱 최적화)
+# ============================================================
+
+# 1. 기본 의존성 먼저 설치
+COPY setup.py pyproject.toml ./
+COPY vtts/__init__.py vtts/
+
+# 2. Supertonic + CUDA 의존성 설치
+RUN pip3 install --no-cache-dir \
+    onnxruntime-gpu>=1.16.0 \
+    && pip3 install --no-cache-dir -e ".[supertonic-cuda]"
+
+# ============================================================
+# 앱 복사
+# ============================================================
+COPY . .
+
+# ============================================================
+# 모델 사전 다운로드 (선택적, 빌드 시간 증가)
+# ============================================================
+# RUN python3 -c "from huggingface_hub import snapshot_download; snapshot_download('Supertone/supertonic-2')"
+
+# ============================================================
+# 포트 및 헬스체크
+# ============================================================
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# ============================================================
+# 엔트리포인트
+# ============================================================
+ENTRYPOINT ["vtts", "serve"]
+CMD ["Supertone/supertonic-2", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]

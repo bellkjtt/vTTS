@@ -1,0 +1,97 @@
+# ============================================================
+# vTTS - CosyVoice Engine Docker Image
+# ============================================================
+# ModelScope 기반 고품질 TTS 엔진
+# 
+# Build:
+#   docker build -f docker/Dockerfile.cosyvoice -t vtts:cosyvoice .
+#
+# Run:
+#   docker run -p 8002:8000 --gpus all vtts:cosyvoice
+# ============================================================
+
+FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
+
+LABEL maintainer="vTTS Contributors"
+LABEL description="vTTS with CosyVoice TTS Engine (ModelScope)"
+LABEL engine="cosyvoice"
+
+# ============================================================
+# 환경 변수
+# ============================================================
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# HuggingFace & ModelScope 캐시 디렉토리
+ENV HF_HOME=/root/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/root/.cache/huggingface
+ENV MODELSCOPE_CACHE=/root/.cache/modelscope
+
+# ============================================================
+# 시스템 패키지 설치
+# ============================================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python
+
+# pip 업그레이드
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+
+# ============================================================
+# 작업 디렉토리
+# ============================================================
+WORKDIR /app
+
+# ============================================================
+# Python 의존성 설치 (레이어 캐싱 최적화)
+# ============================================================
+
+# 1. PyTorch 먼저 설치 (CUDA 버전)
+RUN pip3 install --no-cache-dir \
+    torch==2.1.0+cu121 \
+    torchaudio==2.1.0+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# 2. setup.py 복사
+COPY setup.py pyproject.toml ./
+COPY vtts/__init__.py vtts/
+
+# 3. CosyVoice 의존성 설치
+RUN pip3 install --no-cache-dir \
+    modelscope>=1.9.0 \
+    HyperPyYAML>=1.2.0 \
+    conformer>=0.3.0 \
+    wetext>=0.0.4 \
+    x-transformers>=2.11.0 \
+    diffusers>=0.29.0
+
+# 4. vTTS 설치
+RUN pip3 install --no-cache-dir -e .
+
+# ============================================================
+# 앱 복사
+# ============================================================
+COPY . .
+
+# ============================================================
+# 포트 및 헬스체크
+# ============================================================
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# ============================================================
+# 엔트리포인트
+# ============================================================
+ENTRYPOINT ["vtts", "serve"]
+CMD ["FunAudioLLM/CosyVoice2-0.5B", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]

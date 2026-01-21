@@ -1,0 +1,156 @@
+# ============================================================
+# vTTS - Docker Compose Multi-Engine Setup
+# ============================================================
+# 여러 TTS 엔진을 동시에 실행하고 의존성 충돌 없이 사용
+#
+# 사용법:
+#   # 전체 실행
+#   docker-compose up -d
+#
+#   # 특정 엔진만 실행
+#   docker-compose up -d supertonic
+#   docker-compose up -d gptsovits
+#
+#   # 로그 확인
+#   docker-compose logs -f supertonic
+#
+#   # 종료
+#   docker-compose down
+# ============================================================
+
+version: "3.9"
+
+services:
+  # ============================================================
+  # Supertonic TTS Engine (Port 8001)
+  # 가장 빠름, 다국어 지원 (en, ko, es, pt, fr)
+  # ============================================================
+  supertonic:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.supertonic
+    image: vtts:supertonic
+    container_name: vtts-supertonic
+    ports:
+      - "8001:8000"
+    volumes:
+      # 모델 캐시 공유 (다운로드 중복 방지)
+      - huggingface-cache:/root/.cache/huggingface
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================================
+  # GPT-SoVITS TTS Engine (Port 8002)
+  # 음성 클로닝, 고품질
+  # ============================================================
+  gptsovits:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gptsovits
+    image: vtts:gptsovits
+    container_name: vtts-gptsovits
+    ports:
+      - "8002:8000"
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
+      # GPT-SoVITS 모델 캐시
+      - gptsovits-cache:/root/.cache/GPT-SoVITS
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # ============================================================
+  # CosyVoice TTS Engine (Port 8003)
+  # ModelScope 기반, 고품질
+  # ============================================================
+  cosyvoice:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cosyvoice
+    image: vtts:cosyvoice
+    container_name: vtts-cosyvoice
+    ports:
+      - "8003:8000"
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
+      - modelscope-cache:/root/.cache/modelscope
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  # ============================================================
+  # API Gateway (Nginx) - Optional
+  # 모든 엔진을 단일 엔드포인트로 라우팅
+  # ============================================================
+  gateway:
+    image: nginx:alpine
+    container_name: vtts-gateway
+    ports:
+      - "8000:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - supertonic
+      - gptsovits
+      - cosyvoice
+    restart: unless-stopped
+    profiles:
+      - gateway  # docker-compose --profile gateway up
+
+# ============================================================
+# 볼륨 (모델 캐시 공유)
+# ============================================================
+volumes:
+  huggingface-cache:
+    name: vtts-hf-cache
+  gptsovits-cache:
+    name: vtts-gptsovits-cache
+  modelscope-cache:
+    name: vtts-modelscope-cache
+
+# ============================================================
+# 네트워크
+# ============================================================
+networks:
+  default:
+    name: vtts-network
