@@ -41,13 +41,27 @@ class SupertonicEngine(BaseTTSEngine):
     # HuggingFace 모델 ID
     HF_MODEL_ID = "Supertone/supertonic-2"
     
-    def __init__(self, model_id: str = "Supertone/supertonic-2", **kwargs):
+    def __init__(self, model_id: str = "Supertone/supertonic-2", device: str = "auto", **kwargs):
         super().__init__(model_id, **kwargs)
         self._supported_languages = self.SUPPORTED_LANGS
         self._sample_rate = None  # 모델 로드 후 설정
         self.tts = None
         self._model_dir = None
         self._voice_styles_cache = {}
+        self._device = self._resolve_device(device)
+    
+    def _resolve_device(self, device: str) -> str:
+        """Device 문자열을 해석합니다."""
+        if device == "auto":
+            # CUDA 사용 가능 여부 확인
+            try:
+                import onnxruntime as ort
+                if "CUDAExecutionProvider" in ort.get_available_providers():
+                    return "cuda"
+            except ImportError:
+                pass
+            return "cpu"
+        return device.lower()
         
     def load_model(self) -> None:
         """모델을 로드합니다."""
@@ -73,7 +87,10 @@ class SupertonicEngine(BaseTTSEngine):
             # 내장 모듈로 TTS 로드
             from vtts.engines._supertonic.helper import load_text_to_speech
             
-            self.tts = load_text_to_speech(onnx_dir, use_gpu=False)
+            use_gpu = self._device in ("cuda", "gpu")
+            logger.info(f"Device: {self._device} (use_gpu={use_gpu})")
+            
+            self.tts = load_text_to_speech(onnx_dir, use_gpu=use_gpu)
             self.is_loaded = True
             
             # 실제 샘플레이트 가져오기 (모델 설정에서)

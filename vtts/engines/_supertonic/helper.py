@@ -321,11 +321,22 @@ def load_text_processor(onnx_dir: str) -> UnicodeProcessor:
 
 def load_text_to_speech(onnx_dir: str, use_gpu: bool = False) -> TextToSpeech:
     opts = ort.SessionOptions()
+    
     if use_gpu:
-        raise NotImplementedError("GPU mode is not fully tested")
+        # CUDA 지원 확인
+        available_providers = ort.get_available_providers()
+        if "CUDAExecutionProvider" in available_providers:
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            print("Using CUDA for inference")
+        else:
+            print("WARNING: CUDA requested but CUDAExecutionProvider not available.")
+            print(f"Available providers: {available_providers}")
+            print("Falling back to CPU. Install onnxruntime-gpu for CUDA support.")
+            providers = ["CPUExecutionProvider"]
     else:
         providers = ["CPUExecutionProvider"]
         print("Using CPU for inference")
+    
     cfgs = load_cfgs(onnx_dir)
     dp_ort, text_enc_ort, vector_est_ort, vocoder_ort = load_onnx_all(
         onnx_dir, opts, providers

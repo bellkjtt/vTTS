@@ -66,6 +66,14 @@ setup(
             # PyPI supertonic 패키지 불필요 - vTTS에 포함됨
             "onnxruntime>=1.16.0",
         ],
+        "supertonic-cuda": [
+            # Supertonic with CUDA support
+            "onnxruntime-gpu>=1.16.0",
+        ],
+        "cuda": [
+            # CUDA 지원 (onnxruntime-gpu)
+            "onnxruntime-gpu>=1.16.0",
+        ],
         "cosyvoice": [
             "modelscope>=1.9.0",
             "HyperPyYAML>=1.2.0",
