@@ -1,10 +1,11 @@
 """vTTS Command Line Interface"""
 
 import click
+import subprocess
+import sys
 from rich.console import Console
 from rich.table import Table
 from loguru import logger
-import sys
 
 from vtts.engines.registry import EngineRegistry
 from vtts.server.app import create_app
@@ -149,6 +150,219 @@ def info(model_id: str):
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         sys.exit(1)
+
+
+@main.command()
+@click.option("--fix", is_flag=True, help="문제를 자동으로 수정합니다")
+@click.option("--cuda", is_flag=True, help="CUDA 지원을 설치합니다")
+def doctor(fix: bool, cuda: bool):
+    """환경을 진단하고 문제를 수정합니다.
+    
+    Examples:
+        vtts doctor          # 환경 진단
+        vtts doctor --fix    # 자동 수정
+        vtts doctor --cuda   # CUDA 지원 설치
+    """
+    import torch
+    
+    console.print("\n[bold]🩺 vTTS Environment Diagnosis[/bold]\n")
+    
+    issues = []
+    
+    # ============================================================
+    # 1. Python 버전 확인
+    # ============================================================
+    py_version = sys.version_info
+    py_str = f"{py_version.major}.{py_version.minor}.{py_version.micro}"
+    
+    if py_version >= (3, 10) and py_version < (3, 13):
+        console.print(f"[green]✓[/green] Python: {py_str}")
+    else:
+        console.print(f"[red]✗[/red] Python: {py_str} (3.10-3.12 권장)")
+        issues.append("python")
+    
+    # ============================================================
+    # 2. numpy 버전 확인
+    # ============================================================
+    try:
+        import numpy as np
+        np_version = np.__version__
+        
+        # numpy 2.0 이상은 호환성 문제 있음
+        major = int(np_version.split('.')[0])
+        if major >= 2:
+            console.print(f"[red]✗[/red] numpy: {np_version} (1.24-1.26 권장, 2.x 호환성 문제)")
+            issues.append("numpy")
+        else:
+            console.print(f"[green]✓[/green] numpy: {np_version}")
+    except ImportError:
+        console.print("[red]✗[/red] numpy: 설치되지 않음")
+        issues.append("numpy")
+    
+    # ============================================================
+    # 3. ONNX Runtime 확인
+    # ============================================================
+    try:
+        import onnxruntime as ort
+        ort_version = ort.__version__
+        providers = ort.get_available_providers()
+        
+        has_cuda = "CUDAExecutionProvider" in providers
+        
+        if has_cuda:
+            console.print(f"[green]✓[/green] onnxruntime: {ort_version} (CUDA 지원)")
+        else:
+            console.print(f"[yellow]![/yellow] onnxruntime: {ort_version} (CPU 전용)")
+            if cuda or torch.cuda.is_available():
+                issues.append("onnxruntime-gpu")
+        
+        console.print(f"  [dim]Providers: {', '.join(providers)}[/dim]")
+        
+    except ImportError:
+        console.print("[red]✗[/red] onnxruntime: 설치되지 않음")
+        issues.append("onnxruntime")
+    
+    # ============================================================
+    # 4. PyTorch & CUDA 확인
+    # ============================================================
+    torch_version = torch.__version__
+    cuda_available = torch.cuda.is_available()
+    
+    if cuda_available:
+        cuda_version = torch.version.cuda
+        gpu_name = torch.cuda.get_device_name(0)
+        console.print(f"[green]✓[/green] PyTorch: {torch_version} (CUDA {cuda_version})")
+        console.print(f"  [dim]GPU: {gpu_name}[/dim]")
+    else:
+        console.print(f"[yellow]![/yellow] PyTorch: {torch_version} (CPU 전용)")
+    
+    # ============================================================
+    # 5. vTTS 확인
+    # ============================================================
+    try:
+        import vtts
+        console.print(f"[green]✓[/green] vTTS: 설치됨")
+    except ImportError:
+        console.print("[red]✗[/red] vTTS: 설치되지 않음")
+        issues.append("vtts")
+    
+    # ============================================================
+    # 결과 요약
+    # ============================================================
+    console.print()
+    
+    if not issues:
+        console.print("[bold green]✅ 모든 환경이 정상입니다![/bold green]\n")
+        return
+    
+    console.print(f"[bold yellow]⚠️ {len(issues)}개의 문제가 발견되었습니다:[/bold yellow]")
+    for issue in issues:
+        console.print(f"  - {issue}")
+    
+    if not fix:
+        console.print("\n[dim]자동 수정: vtts doctor --fix[/dim]")
+        console.print("[dim]CUDA 설치: vtts doctor --fix --cuda[/dim]\n")
+        return
+    
+    # ============================================================
+    # 자동 수정
+    # ============================================================
+    console.print("\n[bold]🔧 자동 수정 중...[/bold]\n")
+    
+    # numpy 수정
+    if "numpy" in issues:
+        console.print("[cyan]→[/cyan] numpy 재설치 중...")
+        subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y", "-q"], 
+                      capture_output=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "numpy>=1.24.0,<2.0.0", "-q"],
+                      capture_output=True)
+        console.print("[green]✓[/green] numpy 설치 완료")
+    
+    # onnxruntime 수정
+    if "onnxruntime" in issues or "onnxruntime-gpu" in issues:
+        console.print("[cyan]→[/cyan] onnxruntime 재설치 중...")
+        subprocess.run([sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
+                      capture_output=True)
+        
+        if cuda or torch.cuda.is_available():
+            subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime-gpu>=1.16.0", "-q"],
+                          capture_output=True)
+            console.print("[green]✓[/green] onnxruntime-gpu 설치 완료")
+        else:
+            subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime>=1.16.0", "-q"],
+                          capture_output=True)
+            console.print("[green]✓[/green] onnxruntime 설치 완료")
+    
+    console.print("\n[bold green]✅ 수정 완료![/bold green]")
+    console.print("[dim]변경사항 적용을 위해 Python을 재시작하세요.[/dim]\n")
+
+
+@main.command()
+@click.option("--engine", default="supertonic", help="설치할 엔진 (supertonic, gptsovits, cosyvoice, all)")
+@click.option("--cuda/--no-cuda", default=True, help="CUDA 지원 여부")
+def setup(engine: str, cuda: bool):
+    """엔진별 의존성을 설치합니다.
+    
+    Examples:
+        vtts setup --engine supertonic         # Supertonic (CPU)
+        vtts setup --engine supertonic --cuda  # Supertonic (GPU)
+        vtts setup --engine gptsovits          # GPT-SoVITS
+        vtts setup --engine all                # 모든 엔진
+    """
+    import torch
+    
+    console.print(f"\n[bold]📦 vTTS 엔진 설치: {engine}[/bold]\n")
+    
+    # CUDA 자동 감지
+    if cuda and not torch.cuda.is_available():
+        console.print("[yellow]⚠️ CUDA가 감지되지 않았습니다. CPU 모드로 설치합니다.[/yellow]")
+        cuda = False
+    
+    # numpy 먼저 설치 (호환성)
+    console.print("[cyan]→[/cyan] [1/3] numpy 호환성 확인...")
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y", "-q"],
+                  capture_output=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "numpy>=1.24.0,<2.0.0", "-q"],
+                  capture_output=True)
+    
+    # onnxruntime 설치
+    console.print("[cyan]→[/cyan] [2/3] onnxruntime 설치...")
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
+                  capture_output=True)
+    
+    if engine in ["supertonic", "all"] and cuda:
+        subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime-gpu>=1.16.0", "-q"],
+                      capture_output=True)
+    elif engine == "supertonic":
+        subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime>=1.16.0", "-q"],
+                      capture_output=True)
+    
+    # 엔진별 의존성 설치
+    console.print(f"[cyan]→[/cyan] [3/3] {engine} 의존성 설치...")
+    
+    extras = {
+        "supertonic": "supertonic-cuda" if cuda else "supertonic",
+        "gptsovits": "gptsovits",
+        "cosyvoice": "cosyvoice",
+        "all": "all"
+    }
+    
+    extra = extras.get(engine, "supertonic")
+    
+    # GitHub에서 설치
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-q",
+         f"vtts[{extra}] @ git+https://github.com/bellkjtt/vTTS.git"],
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode == 0:
+        console.print(f"\n[bold green]✅ {engine} 엔진 설치 완료![/bold green]")
+        console.print("\n[dim]사용법: vtts serve Supertone/supertonic-2[/dim]\n")
+    else:
+        console.print(f"\n[bold red]❌ 설치 실패[/bold red]")
+        console.print(f"[dim]{result.stderr}[/dim]")
 
 
 if __name__ == "__main__":
