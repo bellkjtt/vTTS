@@ -19,6 +19,18 @@ class TTSRequest(BaseModel):
     language: Optional[str] = Field(default="ko", description="언어 코드")
     reference_audio: Optional[str] = Field(default=None, description="참조 오디오 (base64 또는 URL)")
     reference_text: Optional[str] = Field(default=None, description="참조 텍스트")
+    
+    # Supertonic 엔진 파라미터
+    total_steps: Optional[int] = Field(
+        default=None, 
+        ge=1, le=20,
+        description="Denoising steps (기본값: 5, 높을수록 품질↑ 속도↓)"
+    )
+    silence_duration: Optional[float] = Field(
+        default=None,
+        ge=0.0, le=2.0,
+        description="청크 사이 무음 시간 (초, 기본값: 0.3)"
+    )
 
 
 class ModelInfo(BaseModel):

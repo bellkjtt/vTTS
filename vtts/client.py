@@ -66,7 +66,10 @@ class VTTSClient:
         speed: float = 1.0,
         response_format: str = "mp3",
         reference_audio: Optional[str] = None,
-        reference_text: Optional[str] = None
+        reference_text: Optional[str] = None,
+        # Supertonic 엔진 파라미터
+        total_steps: Optional[int] = None,
+        silence_duration: Optional[float] = None
     ) -> AudioResponse:
         """
         텍스트를 음성으로 변환합니다.
@@ -76,10 +79,12 @@ class VTTSClient:
             model: 모델 ID (None이면 서버의 기본 모델)
             voice: 음성 ID
             language: 언어 코드 (ko, en, ja, etc)
-            speed: 속도 (0.25 ~ 4.0)
+            speed: 속도 (0.25 ~ 4.0, Supertonic 기본값: 1.05)
             response_format: 응답 포맷 (mp3, wav, flac, etc)
             reference_audio: 참조 오디오 (zero-shot용)
             reference_text: 참조 텍스트
+            total_steps: Denoising steps (기본값: 5, 높을수록 품질↑ 속도↓)
+            silence_duration: 청크 사이 무음 시간 (초, 기본값: 0.3)
             
         Returns:
             AudioResponse: 오디오 응답
@@ -101,6 +106,10 @@ class VTTSClient:
             payload["reference_audio"] = reference_audio
         if reference_text:
             payload["reference_text"] = reference_text
+        if total_steps is not None:
+            payload["total_steps"] = total_steps
+        if silence_duration is not None:
+            payload["silence_duration"] = silence_duration
         
         logger.info(f"Synthesizing: {text[:50]}...")
         

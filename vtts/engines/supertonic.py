@@ -149,16 +149,28 @@ class SupertonicEngine(BaseTTSEngine):
             # 음성 합성 (내장 모듈 사용 - lang 파라미터로 언어 지정)
             logger.debug(f"Synthesizing text ({len(request.text)} chars): {request.text[:50]}...")
             
+            # 파라미터 추출 (extra_params 또는 기본값)
+            extra = request.extra_params or {}
+            
             # 속도 조정 (Supertonic 공식 기본값: 1.05, higher = faster)
             speed = request.speed if request.speed else 1.05
+            
+            # Denoising steps (기본값: 5, 높을수록 품질↑ 속도↓)
+            total_steps = extra.get("total_steps", 5)
+            
+            # 청크 사이 무음 시간 (기본값: 0.3초)
+            silence_duration = extra.get("silence_duration", 0.3)
+            
+            logger.debug(f"Params: speed={speed}, total_steps={total_steps}, silence_duration={silence_duration}")
             
             # ONNX 직접 추론 (lang 파라미터 사용)
             wav, duration = self.tts(
                 text=request.text,
                 lang=lang,
                 style=voice_style,
-                total_step=5,  # 기본 inference steps
+                total_step=total_steps,
                 speed=speed,
+                silence_duration=silence_duration,
             )
             
             # duration이 배열인 경우 스칼라로 변환

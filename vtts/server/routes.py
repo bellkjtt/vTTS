@@ -89,6 +89,13 @@ async def create_speech(
     engine = request.app.state.engine
     
     try:
+        # 엔진별 추가 파라미터
+        extra_params = {}
+        if tts_request.total_steps is not None:
+            extra_params["total_steps"] = tts_request.total_steps
+        if tts_request.silence_duration is not None:
+            extra_params["silence_duration"] = tts_request.silence_duration
+        
         # 엔진 요청 변환
         engine_request = EngineTTSRequest(
             text=tts_request.input,
@@ -97,7 +104,8 @@ async def create_speech(
             speed=tts_request.speed,
             reference_audio=tts_request.reference_audio,
             reference_text=tts_request.reference_text,
-            stream=False
+            stream=False,
+            extra_params=extra_params if extra_params else None
         )
         
         # 음성 합성
