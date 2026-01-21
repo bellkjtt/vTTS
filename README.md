@@ -40,44 +40,69 @@
 
 ## 🚀 빠른 시작
 
-### 방법 1: CLI로 자동 설치 (권장)
+### 방법 1: Supertonic만 사용 (가장 간편)
 
 ```bash
-# 1. 기본 설치
-pip install git+https://github.com/bellkjtt/vTTS.git
-
-# 2. 엔진 설치 (자동으로 의존성 처리)
-vtts setup --engine supertonic --cuda   # Supertonic + CUDA
-vtts setup --engine gptsovits           # GPT-SoVITS
-vtts setup --engine all                 # 모든 엔진
-```
-
-### 방법 2: pip으로 직접 설치
-
-```bash
-# Supertonic (가장 가벼움)
-pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
-
-# Supertonic + CUDA
+# CUDA 지원 설치 (권장)
 pip install "vtts[supertonic-cuda] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# 모든 엔진 (CUDA 포함)
-pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
+# CPU만 사용
+pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 서버 실행
+vtts serve Supertone/supertonic-2 --device cuda
 ```
 
-### 방법 3: Docker (의존성 충돌 방지)
+### 방법 2: GPT-SoVITS 설치 (음성 클로닝)
+
+> ⚠️ GPT-SoVITS는 저장소 클론이 **필수**입니다 (pip 패키지 없음)
 
 ```bash
-# 개별 엔진
+# 1. vTTS 기본 설치
+pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 2. GPT-SoVITS 저장소 클론 (필수!)
+git clone https://github.com/RVC-Boss/GPT-SoVITS.git third_party/GPT-SoVITS
+cd third_party/GPT-SoVITS
+pip install -r requirements.txt
+cd ../..
+
+# 3. 환경변수 설정 (선택적)
+export GPT_SOVITS_PATH=$(pwd)/third_party/GPT-SoVITS
+
+# 4. 서버 실행
+vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+```
+
+### 방법 3: Docker (의존성 충돌 방지, 권장)
+
+```bash
+# Supertonic (가장 빠름)
 docker-compose up -d supertonic   # :8001
+
+# GPT-SoVITS (음성 클로닝) - reference_audio 볼륨 필요
+mkdir -p reference_audio
 docker-compose up -d gptsovits    # :8002
+
+# CosyVoice (고품질)
 docker-compose up -d cosyvoice    # :8003
 
-# 전체 + Gateway
+# 전체 + API Gateway
 docker-compose --profile gateway up -d  # :8000
 ```
 
 📖 자세한 내용: [Docker 가이드](DOCKER.md)
+
+### 방법 4: CLI 자동 설치
+
+```bash
+# 기본 설치 후 엔진 추가
+pip install git+https://github.com/bellkjtt/vTTS.git
+
+vtts setup --engine supertonic --cuda   # Supertonic + CUDA
+vtts setup --engine gptsovits           # GPT-SoVITS (저장소 클론 포함)
+vtts setup --engine all                 # 모든 엔진
+```
 
 ---
 
