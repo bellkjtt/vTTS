@@ -149,8 +149,8 @@ class SupertonicEngine(BaseTTSEngine):
             # 음성 합성 (내장 모듈 사용 - lang 파라미터로 언어 지정)
             logger.debug(f"Synthesizing text ({len(request.text)} chars): {request.text[:50]}...")
             
-            # 속도 조정 (기본값 1.05)
-            speed = request.speed if request.speed else 1.0
+            # 속도 조정 (Supertonic 공식 기본값: 1.05, higher = faster)
+            speed = request.speed if request.speed else 1.05
             
             # ONNX 직접 추론 (lang 파라미터 사용)
             wav, duration = self.tts(
