@@ -139,7 +139,7 @@ gptsovits = VTTSClient("http://localhost:8002")
 # 음성 클로닝 TTS (reference_audio 필수!)
 audio = gptsovits.tts(
     text="안녕하세요, 음성 클로닝 테스트입니다.",
-    model="lj1995/GPT-SoVITS",
+    model="kevinwang676/GPT-SoVITS-v3",
     language="ko",
     reference_audio="/app/reference_audio/sample.wav",
     reference_text="참조 오디오에서 말하는 내용"

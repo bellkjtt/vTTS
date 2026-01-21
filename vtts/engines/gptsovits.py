@@ -61,7 +61,7 @@ class GPTSoVITSEngine(BaseTTSEngine):
     
     def __init__(
         self,
-        model_id: str = "lj1995/GPT-SoVITS",
+        model_id: str = "kevinwang676/GPT-SoVITS-v3",
         version: str = "v3",
         device: str = "auto",
         **kwargs

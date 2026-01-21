@@ -62,7 +62,7 @@ pip install git+https://github.com/bellkjtt/vTTS.git
 vtts setup --engine gptsovits
 
 # 3. 启动服务器
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 > 💡 `vtts setup` 自动将GPT-SoVITS克隆到 `~/.vtts/GPT-SoVITS` 并安装依赖。
@@ -154,7 +154,7 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 echo $GPT_SOVITS_PATH  # 应输出 ~/.vtts/GPT-SoVITS
 
 # 启动服务器
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 ### TTS + STT同时
@@ -217,7 +217,7 @@ client = VTTSClient("http://localhost:8002")
 
 audio = client.tts(
     text="这是语音克隆测试。",
-    model="lj1995/GPT-SoVITS",
+    model="kevinwang676/GPT-SoVITS-v3",
     voice="reference",
     language="zh",
     reference_audio="./samples/reference.wav",  # 参考音频 (必需!)

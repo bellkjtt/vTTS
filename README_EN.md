@@ -62,7 +62,7 @@ pip install git+https://github.com/bellkjtt/vTTS.git
 vtts setup --engine gptsovits
 
 # 3. Start server
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 > 💡 `vtts setup` automatically clones GPT-SoVITS to `~/.vtts/GPT-SoVITS` and installs dependencies.
@@ -154,7 +154,7 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 echo $GPT_SOVITS_PATH  # Should output ~/.vtts/GPT-SoVITS
 
 # Start server
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 ### TTS + STT Simultaneous
@@ -217,7 +217,7 @@ client = VTTSClient("http://localhost:8002")
 
 audio = client.tts(
     text="This is a voice cloning test.",
-    model="lj1995/GPT-SoVITS",
+    model="kevinwang676/GPT-SoVITS-v3",
     voice="reference",
     language="en",
     reference_audio="./samples/reference.wav",  # Reference audio (required!)

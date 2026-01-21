@@ -62,7 +62,7 @@ pip install git+https://github.com/bellkjtt/vTTS.git
 vtts setup --engine gptsovits
 
 # 3. サーバー起動
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 > 💡 `vtts setup` は GPT-SoVITSを `~/.vtts/GPT-SoVITS` に自動クローンし、依存関係をインストールします。
@@ -154,7 +154,7 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 echo $GPT_SOVITS_PATH  # ~/.vtts/GPT-SoVITS が出力されるべき
 
 # サーバー起動
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 ### TTS + STT同時
@@ -217,7 +217,7 @@ client = VTTSClient("http://localhost:8002")
 
 audio = client.tts(
     text="これは音声クローンのテストです。",
-    model="lj1995/GPT-SoVITS",
+    model="kevinwang676/GPT-SoVITS-v3",
     voice="reference",
     language="ja",
     reference_audio="./samples/reference.wav",  # 参照音声 (必須!)

@@ -105,7 +105,7 @@ COPY . .
 # ============================================================
 # 빌드 시 모델 다운로드하려면 아래 주석 해제
 # RUN python3 -c "from huggingface_hub import snapshot_download; \
-#     snapshot_download('lj1995/GPT-SoVITS', cache_dir='/root/.cache/huggingface')"
+#     snapshot_download('kevinwang676/GPT-SoVITS-v3', cache_dir='/root/.cache/huggingface')"
 
 # ============================================================
 # Reference Audio 볼륨
@@ -125,4 +125,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
 # 엔트리포인트
 # ============================================================
 ENTRYPOINT ["vtts", "serve"]
-CMD ["lj1995/GPT-SoVITS", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]
+CMD ["kevinwang676/GPT-SoVITS-v3", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]

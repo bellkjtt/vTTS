@@ -50,10 +50,17 @@ class EngineRegistry:
         
         # 정확한 패턴 매칭
         for pattern, engine_name in cls._model_patterns.items():
-            pattern_clean = pattern.replace("*", "")
-            if pattern.endswith("*"):
+            pattern_clean = pattern.replace("*", "").lower()
+            
+            # 양쪽에 * 있는 경우 (e.g., *gpt-sovits*)
+            if pattern.startswith("*") and pattern.endswith("*"):
+                if pattern_clean in model_id_lower:
+                    return cls._engines.get(engine_name)
+            # 뒤에만 * 있는 경우 (e.g., Supertone/*)
+            elif pattern.endswith("*"):
                 if model_id_lower.startswith(pattern_clean):
                     return cls._engines.get(engine_name)
+            # 앞에만 * 있는 경우 (e.g., *supertonic)
             elif pattern.startswith("*"):
                 if model_id_lower.endswith(pattern_clean):
                     return cls._engines.get(engine_name)
@@ -108,7 +115,7 @@ def auto_register_engines():
         EngineRegistry.register(
             "gptsovits",
             GPTSoVITSEngine,
-            model_patterns=["*GPT-SoVITS*", "*gpt-sovits*", "*gptsovits*"]
+            model_patterns=["kevinwang676/*", "lj1995/*", "*GPT-SoVITS*", "*gpt-sovits*", "*gptsovits*"]
         )
     except ImportError as e:
         logger.debug(f"GPT-SoVITS engine not available: {e}")

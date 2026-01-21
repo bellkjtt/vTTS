@@ -63,7 +63,7 @@ pip install git+https://github.com/bellkjtt/vTTS.git
 vtts setup --engine gptsovits
 
 # 3. 서버 실행
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 > 💡 `vtts setup`은 GPT-SoVITS를 `~/.vtts/GPT-SoVITS`에 자동으로 클론하고 의존성을 설치합니다.
@@ -155,7 +155,7 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 echo $GPT_SOVITS_PATH  # ~/GPT-SoVITS 출력되어야 함
 
 # 서버 실행
-vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
 ### TTS + STT 동시
@@ -218,7 +218,7 @@ client = VTTSClient("http://localhost:8002")
 
 audio = client.tts(
     text="안녕하세요, 음성 클로닝 테스트입니다.",
-    model="lj1995/GPT-SoVITS",
+    model="kevinwang676/GPT-SoVITS-v3",
     voice="reference",
     language="ko",
     reference_audio="./samples/reference.wav",  # 참조 오디오 (필수!)

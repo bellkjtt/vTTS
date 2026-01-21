@@ -429,7 +429,7 @@ def setup(engine: str, cuda: bool):
         console.print(f"\n[bold green]✅ {engine} 엔진 설치 완료![/bold green]")
         
         if engine == "gptsovits":
-            console.print("\n[dim]사용법: vtts serve lj1995/GPT-SoVITS --device cuda[/dim]")
+            console.print("\n[dim]사용법: vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda[/dim]")
             console.print("[dim]참고: reference_audio와 reference_text 파라미터가 필수입니다![/dim]\n")
         else:
             console.print("\n[dim]사용법: vtts serve Supertone/supertonic-2[/dim]\n")
