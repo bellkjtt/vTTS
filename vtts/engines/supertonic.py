@@ -44,7 +44,7 @@ class SupertonicEngine(BaseTTSEngine):
     def __init__(self, model_id: str = "Supertone/supertonic-2", **kwargs):
         super().__init__(model_id, **kwargs)
         self._supported_languages = self.SUPPORTED_LANGS
-        self._sample_rate = 24000  # Supertonic-2 uses 24kHz
+        self._sample_rate = None  # 모델 로드 후 설정
         self.tts = None
         self._model_dir = None
         self._voice_styles_cache = {}
@@ -76,7 +76,11 @@ class SupertonicEngine(BaseTTSEngine):
             self.tts = load_text_to_speech(onnx_dir, use_gpu=False)
             self.is_loaded = True
             
+            # 실제 샘플레이트 가져오기 (모델 설정에서)
+            self._sample_rate = self.tts.sample_rate
+            
             logger.info(f"Successfully loaded Supertonic model: {self.model_id}")
+            logger.info(f"Sample rate: {self._sample_rate} Hz")
             logger.info(f"Available voice styles: {', '.join(self.VOICE_STYLES)}")
             logger.info(f"Supported languages: {', '.join(self.SUPPORTED_LANGS)}")
             
@@ -257,8 +261,8 @@ class SupertonicEngine(BaseTTSEngine):
     
     @property
     def default_sample_rate(self) -> int:
-        """기본 샘플링 레이트"""
-        return self._sample_rate
+        """기본 샘플링 레이트 (모델 로드 후 실제 값 사용)"""
+        return self._sample_rate if self._sample_rate else 24000
     
     @property
     def supports_streaming(self) -> bool:
