@@ -17,95 +17,165 @@
 - 🌐 **OpenAI 호환 API**: OpenAI TTS & Whisper API와 완전 호환
 - 🎙️ **TTS + STT 통합**: 텍스트 음성 변환과 음성 인식 동시 지원
 - 🇰🇷 **한국어 우선**: 한국어 지원 모델 중심
-- 🔌 **플러그인 아키텍처**: 새로운 엔진 쉽게 추가 가능
+- 🐳 **Docker 지원**: 의존성 충돌 없이 여러 엔진 동시 실행
+- 🎮 **CUDA 지원**: GPU 가속으로 빠른 추론
 
 ## 📦 지원 모델
 
 ### TTS (Text-to-Speech)
-- ✅ **GPT-SoVITS-v3** - Few-shot 음성 복제
-- ✅ **Supertonic-2** - 초고속 온디바이스 TTS (5개 언어: en, ko, es, pt, fr)
-- ✅ **CosyVoice3** - Zero-shot 다국어 TTS (9개 언어, 18+ 중국 방언)
-- 🔜 **StyleTTS2**, **XTTS-v2**, **Bark**
+| 엔진 | 속도 | 품질 | 다국어 | 음성 클로닝 |
+|------|------|------|--------|------------|
+| ✅ **Supertonic-2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | 5개 언어 | ❌ |
+| ✅ **GPT-SoVITS-v3** | ⭐⭐ | ⭐⭐⭐⭐⭐ | 제한적 | ✅ |
+| ✅ **CosyVoice3** | ⭐⭐⭐ | ⭐⭐⭐⭐ | 9개 언어 | ⚠️ |
+| 🔜 **StyleTTS2**, **XTTS-v2**, **Bark** | - | - | - | - |
 
 ### STT (Speech-to-Text)
 - ✅ **Faster-Whisper** - 초고속 Whisper (CTranslate2)
 - 🔜 **Whisper.cpp**, **Parakeet**
 
+---
+
 ## 🚀 빠른 시작
 
-### 설치
+### 방법 1: CLI로 자동 설치 (권장)
 
-#### 기본 설치
 ```bash
-# GitHub에서 설치 (Supertonic-2 + Faster-Whisper 포함)
+# 1. 기본 설치
 pip install git+https://github.com/bellkjtt/vTTS.git
-pip install supertonic
+
+# 2. 엔진 설치 (자동으로 의존성 처리)
+vtts setup --engine supertonic --cuda   # Supertonic + CUDA
+vtts setup --engine gptsovits           # GPT-SoVITS
+vtts setup --engine all                 # 모든 엔진
 ```
 
-#### 모든 엔진 설치 (권장)
-```bash
-# 1. 모든 dependency 설치
-pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
+### 방법 2: pip으로 직접 설치
 
-# 2. 고급 엔진 사용을 위한 저장소 클론 (선택)
-git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
-git clone https://github.com/RVC-Boss/GPT-SoVITS.git
-export PYTHONPATH="$PWD/CosyVoice:$PWD/GPT-SoVITS:$PYTHONPATH"
-```
-
-#### 개별 엔진 설치
 ```bash
-# Supertonic-2만
+# Supertonic (가장 가벼움)
 pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# CosyVoice만  
-pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
+# Supertonic + CUDA
+pip install "vtts[supertonic-cuda] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# GPT-SoVITS만
-pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
+# 모든 엔진 (CUDA 포함)
+pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
 ```
 
-#### Kaggle에서 테스트
-[Kaggle 노트북](kaggle_test_notebook.ipynb) 참고
+### 방법 3: Docker (의존성 충돌 방지)
 
-⚠️ **설치 문제가 있나요?** [문제 해결 가이드](TROUBLESHOOTING.md)를 확인하세요.
-
-### 서버 실행
-
-#### TTS 전용
 ```bash
-# 모델 자동 다운로드 및 서버 시작
+# 개별 엔진
+docker-compose up -d supertonic   # :8001
+docker-compose up -d gptsovits    # :8002
+docker-compose up -d cosyvoice    # :8003
+
+# 전체 + Gateway
+docker-compose --profile gateway up -d  # :8000
+```
+
+📖 자세한 내용: [Docker 가이드](DOCKER.md)
+
+---
+
+## 🔧 환경 설정
+
+### 환경 진단 및 자동 수정
+
+```bash
+# 환경 진단
+vtts doctor
+
+# 자동 수정 (numpy, onnxruntime 호환성 문제 해결)
+vtts doctor --fix
+
+# CUDA 지원 강제 설치
+vtts doctor --fix --cuda
+```
+
+출력 예시:
+```
+🩺 vTTS Environment Diagnosis
+
+✓ Python: 3.10.12
+✓ numpy: 1.26.4
+✓ onnxruntime: 1.16.0 (CUDA 지원)
+  Providers: CUDAExecutionProvider, CPUExecutionProvider
+✓ PyTorch: 2.1.0 (CUDA 12.1)
+  GPU: NVIDIA GeForce RTX 4090
+✓ vTTS: 설치됨
+
+✅ 모든 환경이 정상입니다!
+```
+
+### Kaggle/Colab에서
+
+```python
+# 설치 + 환경 자동 설정
+!pip install -q git+https://github.com/bellkjtt/vTTS.git
+!vtts doctor --fix --cuda
+```
+
+---
+
+## 💻 서버 실행
+
+### TTS 전용
+```bash
 vtts serve Supertone/supertonic-2
-
-# 포트 지정
-vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --port 8000
+vtts serve Supertone/supertonic-2 --device cuda --port 8000
 ```
 
-#### TTS + STT 동시
+### TTS + STT 동시
 ```bash
-# TTS와 STT를 동시에 서빙
 vtts serve Supertone/supertonic-2 --stt-model large-v3
-
-# GPU 지정
-vtts serve kevinwang676/GPT-SoVITS-v3 --stt-model large-v3 --device cuda:0
+vtts serve Supertone/supertonic-2 --stt-model base --device cuda
 ```
 
-### Python 사용
+### 사용 가능한 옵션
+| 옵션 | 기본값 | 설명 |
+|------|--------|------|
+| `--host` | 0.0.0.0 | 서버 호스트 |
+| `--port` | 8000 | 서버 포트 |
+| `--device` | auto | cuda, cpu, auto |
+| `--stt-model` | None | Whisper 모델 (base, large-v3 등) |
+| `--log-level` | INFO | DEBUG, INFO, WARNING, ERROR |
+
+---
+
+## 🐍 Python 사용
+
+### 기본 사용법
 ```python
 from vtts import VTTSClient
 
-client = VTTSClient(base_url="http://localhost:8000")
+client = VTTSClient("http://localhost:8000")
 
-# 음성 생성
+# TTS
 audio = client.tts(
-    text="안녕하세요, vTTS를 사용해주셔서 감사합니다.",
-    model="Supertone/supertonic-2",
+    text="안녕하세요, vTTS입니다.",
+    voice="F1",
     language="ko",
-    voice="default"
+    speed=1.05
 )
-
-# 파일로 저장
 audio.save("output.wav")
+
+# STT
+text = client.stt("audio.wav")
+print(text)
+```
+
+### 고급 옵션 (Supertonic)
+```python
+audio = client.tts(
+    text="안녕하세요",
+    voice="F1",           # M1-M4, F1-F4
+    language="ko",        # en, ko, es, pt, fr
+    speed=1.05,           # 속도 (기본: 1.05)
+    total_steps=5,        # 품질 (1-20, 기본: 5)
+    silence_duration=0.3  # 청크 간 무음 (초)
+)
 ```
 
 ### OpenAI SDK 호환
@@ -116,67 +186,151 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")
 
 response = client.audio.speech.create(
     model="Supertone/supertonic-2",
-    voice="default",
+    voice="F1",
     input="안녕하세요, 반갑습니다."
 )
-
 response.stream_to_file("output.mp3")
 ```
+
+### cURL
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Hello!", "voice": "F1", "model": "Supertone/supertonic-2"}' \
+  --output output.mp3
+```
+
+---
+
+## 🐳 Docker
+
+### 포트 구성
+| 엔진 | 포트 | GPU 메모리 |
+|------|------|-----------|
+| Gateway (Nginx) | 8000 | - |
+| Supertonic | 8001 | ~1GB |
+| GPT-SoVITS | 8002 | ~4GB |
+| CosyVoice | 8003 | ~3GB |
+
+### 빠른 시작
+```bash
+# 이미지 빌드
+docker-compose build
+
+# 실행
+docker-compose up -d supertonic   # Supertonic만
+docker-compose up -d              # 전체
+
+# 로그
+docker-compose logs -f supertonic
+
+# 종료
+docker-compose down
+```
+
+📖 자세한 내용: [Docker 가이드](DOCKER.md)
+
+---
+
+## 📊 CLI 명령어
+
+| 명령어 | 설명 |
+|--------|------|
+| `vtts serve MODEL` | TTS 서버 시작 |
+| `vtts doctor` | 환경 진단 |
+| `vtts doctor --fix` | 환경 자동 수정 |
+| `vtts setup --engine ENGINE` | 엔진별 설치 |
+| `vtts list-models` | 지원 모델 목록 |
+| `vtts info MODEL` | 모델 정보 |
+
+---
 
 ## 🏗️ 아키텍처
 
 ```
 vTTS/
 ├── vtts/
-│   ├── __init__.py
-│   ├── cli.py                 # CLI 진입점
+│   ├── __init__.py           # 환경 자동 체크
+│   ├── cli.py                # CLI (serve, doctor, setup)
+│   ├── client.py             # Python 클라이언트
 │   ├── server/
-│   │   ├── __init__.py
 │   │   ├── app.py            # FastAPI 앱
-│   │   ├── routes.py         # API 라우트
+│   │   ├── routes.py         # TTS API 라우트
+│   │   ├── stt_routes.py     # STT API 라우트
 │   │   └── models.py         # Pydantic 모델
 │   ├── engines/
-│   │   ├── __init__.py
 │   │   ├── base.py           # 베이스 엔진 인터페이스
-│   │   ├── registry.py       # 엔진 레지스트리
-│   │   ├── gptsovits.py      # GPT-SoVITS 엔진
+│   │   ├── registry.py       # 엔진 자동 등록
 │   │   ├── supertonic.py     # Supertonic 엔진
-│   │   └── cosyvoice.py      # CosyVoice 엔진
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── loader.py         # 모델 로더
-│   │   └── cache.py          # 모델 캐시 관리
+│   │   ├── gptsovits.py      # GPT-SoVITS 엔진
+│   │   ├── cosyvoice.py      # CosyVoice 엔진
+│   │   └── _supertonic/      # 내장 ONNX 모듈
 │   └── utils/
-│       ├── __init__.py
-│       ├── audio.py          # 오디오 처리
-│       └── hf.py             # Huggingface 유틸
-├── tests/
-├── examples/
-├── pyproject.toml
+│       └── audio.py          # 오디오 처리
+├── docker/
+│   ├── Dockerfile.supertonic
+│   ├── Dockerfile.gptsovits
+│   ├── Dockerfile.cosyvoice
+│   └── nginx.conf            # API Gateway
+├── docker-compose.yml
+├── setup.py
 └── README.md
 ```
+
+---
 
 ## 🔧 개발 로드맵
 
 - [x] 프로젝트 구조 설계
-- [ ] 베이스 엔진 인터페이스 구현
-- [ ] Supertonic-2 엔진 구현
-- [ ] CosyVoice3 엔진 구현
-- [ ] GPT-SoVITS 엔진 구현
-- [ ] FastAPI 서버 구현
-- [ ] OpenAI 호환 API
-- [ ] CLI 구현
-- [ ] 모델 자동 다운로드
+- [x] 베이스 엔진 인터페이스 구현
+- [x] Supertonic-2 엔진 구현
+- [x] CosyVoice3 엔진 구현
+- [x] GPT-SoVITS 엔진 구현
+- [x] FastAPI 서버 구현
+- [x] OpenAI 호환 API
+- [x] CLI 구현 (serve, doctor, setup)
+- [x] 모델 자동 다운로드
+- [x] CUDA 지원
+- [x] Docker 이미지
+- [x] 환경 자동 진단/수정
 - [ ] 스트리밍 지원
 - [ ] 배치 추론 최적화
-- [ ] Docker 이미지
+
+---
 
 ## 📚 문서
 
 - [빠른 시작 가이드](QUICKSTART.md)
-- [문제 해결 가이드](TROUBLESHOOTING.md) - 500 에러, 설치 문제 등
+- [문제 해결 가이드](TROUBLESHOOTING.md)
+- [Docker 가이드](DOCKER.md)
 - [Kaggle 테스트 노트북](kaggle_test_notebook.ipynb)
 - [예제 코드](examples/)
+
+---
+
+## ⚠️ 문제 해결
+
+### numpy 호환성 에러
+```
+ValueError: numpy.dtype size changed, may indicate binary incompatibility
+```
+**해결**: `vtts doctor --fix`
+
+### CUDA를 찾을 수 없음
+```
+WARNING: CUDA requested but CUDAExecutionProvider not available
+```
+**해결**: `vtts doctor --fix --cuda`
+
+### 의존성 충돌
+**해결**: Docker 사용 권장
+```bash
+docker-compose up -d supertonic
+```
+
+📖 더 많은 문제: [문제 해결 가이드](TROUBLESHOOTING.md)
+
+---
 
 ## 📝 라이선스
 
@@ -188,8 +342,6 @@ MIT License
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-pink?style=for-the-badge)](https://github.com/sponsors/bellkjtt)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-orange?style=for-the-badge)](https://ko-fi.com/bellkjtt)
-
-후원해주시면 프로젝트 개발에 큰 도움이 됩니다!
 
 ## 🙏 감사의 말
 
