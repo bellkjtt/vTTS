@@ -96,7 +96,8 @@ setup(
             "ko_pron",
         ],
         "all": [
-            "onnxruntime>=1.16.0",
+            # CUDA 지원 포함 (GPU 없어도 CPU로 동작)
+            "onnxruntime-gpu>=1.16.0",
             "modelscope>=1.9.0",
             "HyperPyYAML>=1.2.0",
             "conformer>=0.3.0",
