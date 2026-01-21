@@ -6,105 +6,226 @@
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/bellkjtt)](https://github.com/sponsors/bellkjtt)
 [![Status](https://img.shields.io/badge/status-beta-yellow.svg)](https://github.com/bellkjtt/vTTS)
 
-**vLLM for Speech** - Universal TTS/STT serving system with automatic model download from Huggingface
+**vLLM for Speech** - Universal TTS/STT serving system with direct Huggingface download and inference
 
 [한국어](README.md) | English | [中文](README_ZH.md) | [日本語](README_JA.md)
 
 ## 🎯 Goals
 
-- 🚀 **Simple Usage**: Start server with one command `vtts serve model-name`
+- 🚀 **Simple Usage**: Start server with one line `vtts serve model-name`
 - 🤗 **Huggingface Integration**: Automatic model download and caching
-- 🌐 **OpenAI Compatible**: Full compatibility with OpenAI TTS & Whisper API
-- 🎙️ **TTS + STT Integration**: Simultaneous text-to-speech and speech-to-text support
-- 🇰🇷 **Korean First**: Focus on Korean-supporting models
-- 🔌 **Plugin Architecture**: Easy to add new engines
+- 🌐 **OpenAI Compatible API**: Fully compatible with OpenAI TTS & Whisper API
+- 🎙️ **TTS + STT Integration**: Text-to-Speech and Speech-to-Text unified
+- 🐳 **Docker Support**: Run multiple engines simultaneously without dependency conflicts
+- 🎮 **CUDA Support**: Fast inference with GPU acceleration
 
 ## 📦 Supported Models
 
 ### TTS (Text-to-Speech)
-- ✅ **GPT-SoVITS-v3** - Few-shot voice cloning
-- ✅ **Supertonic-2** - Ultra-fast on-device TTS (5 languages)
-- ✅ **CosyVoice3** - Zero-shot multilingual TTS (9 languages, 18+ Chinese dialects)
-- 🔜 **StyleTTS2**, **XTTS-v2**, **Bark**
+| Engine | Speed | Quality | Multilingual | Voice Cloning | Reference Audio |
+|--------|-------|---------|--------------|---------------|-----------------|
+| ✅ **Supertonic-2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | 5 languages | ❌ | Not required |
+| ✅ **GPT-SoVITS v3** | ⭐⭐ | ⭐⭐⭐⭐⭐ | 5 languages | ✅ Zero-shot | **Required** |
+| ✅ **CosyVoice3** | ⭐⭐⭐ | ⭐⭐⭐⭐ | 9 languages | ⚠️ | Optional |
+| 🔜 **StyleTTS2**, **XTTS-v2**, **Bark** | - | - | - | - | - |
+
+> **GPT-SoVITS**: Zero-shot voice cloning model. Requires 3-10 second reference audio.
 
 ### STT (Speech-to-Text)
-- ✅ **Faster-Whisper** - High-performance Whisper (CTranslate2)
+- ✅ **Faster-Whisper** - Ultra-fast Whisper (CTranslate2)
 - 🔜 **Whisper.cpp**, **Parakeet**
+
+---
 
 ## 🚀 Quick Start
 
-### Installation
+### Method 1: Supertonic Only (Simplest)
 
-#### Basic Installation
 ```bash
-# Install from GitHub (includes Supertonic-2 + Faster-Whisper)
-pip install git+https://github.com/bellkjtt/vTTS.git
-pip install supertonic
-```
+# CUDA support (recommended)
+pip install "vtts[supertonic-cuda] @ git+https://github.com/bellkjtt/vTTS.git"
 
-#### Install All Engines (Recommended)
-```bash
-# 1. Install all dependencies
-pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
-
-# 2. Clone repositories for advanced engines (optional)
-git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
-git clone https://github.com/RVC-Boss/GPT-SoVITS.git
-export PYTHONPATH="$PWD/CosyVoice:$PWD/GPT-SoVITS:$PYTHONPATH"
-```
-
-#### Install Individual Engines
-```bash
-# Supertonic-2 only
+# CPU only
 pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# CosyVoice only
-pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
-
-# GPT-SoVITS only
-pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
+# Start server
+vtts serve Supertone/supertonic-2 --device cuda
 ```
 
-#### Test on Kaggle
-See [Kaggle Notebook](kaggle_test_notebook.ipynb)
+### Method 2: GPT-SoVITS Setup (Voice Cloning)
 
-### Start Server
-
-#### TTS Only
 ```bash
-# Auto-download model and start server
+# 1. Install vTTS base
+pip install git+https://github.com/bellkjtt/vTTS.git
+
+# 2. Auto-install GPT-SoVITS (auto clone repo + install dependencies!)
+vtts setup --engine gptsovits
+
+# 3. Start server
+vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
+```
+
+> 💡 `vtts setup` automatically clones GPT-SoVITS to `~/.vtts/GPT-SoVITS` and installs dependencies.
+
+### Method 3: Docker (Recommended for Multiple Engines)
+
+```bash
+# Supertonic (fastest)
+docker-compose up -d supertonic   # :8001
+
+# GPT-SoVITS (voice cloning) - reference_audio volume required
+mkdir -p reference_audio
+docker-compose up -d gptsovits    # :8002
+
+# CosyVoice (high quality)
+docker-compose up -d cosyvoice    # :8003
+
+# All + API Gateway
+docker-compose --profile gateway up -d  # :8000
+```
+
+📖 Details: [Docker Guide](DOCKER.md)
+
+### Method 4: CLI Auto-Install
+
+```bash
+# Install base, then add engines
+pip install git+https://github.com/bellkjtt/vTTS.git
+
+vtts setup --engine supertonic --cuda   # Supertonic + CUDA
+vtts setup --engine gptsovits           # GPT-SoVITS (includes repo clone)
+vtts setup --engine all                 # All engines
+```
+
+---
+
+## 🔧 Environment Setup
+
+### Diagnose and Auto-Fix
+
+```bash
+# Diagnose environment
+vtts doctor
+
+# Auto-fix (numpy, onnxruntime compatibility)
+vtts doctor --fix
+
+# Force CUDA installation
+vtts doctor --fix --cuda
+```
+
+Example output:
+```
+🩺 vTTS Environment Diagnosis
+
+✓ Python: 3.10.12
+✓ numpy: 1.26.4
+✓ onnxruntime: 1.16.0 (CUDA supported)
+  Providers: CUDAExecutionProvider, CPUExecutionProvider
+✓ PyTorch: 2.1.0 (CUDA 12.1)
+  GPU: NVIDIA GeForce RTX 4090
+✓ vTTS: Installed
+
+✅ All environments are ready!
+```
+
+### On Kaggle/Colab
+
+```python
+# Install + auto-configure
+!pip install -q git+https://github.com/bellkjtt/vTTS.git
+!vtts doctor --fix --cuda
+```
+
+---
+
+## 💻 Starting Server
+
+### Supertonic (Fast TTS)
+```bash
 vtts serve Supertone/supertonic-2
-
-# Specify port
-vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --port 8000
+vtts serve Supertone/supertonic-2 --device cuda --port 8000
 ```
 
-#### TTS + STT Together
+### GPT-SoVITS (Voice Cloning)
 ```bash
-# Serve both TTS and STT
-vtts serve Supertone/supertonic-2 --stt-model large-v3
+# GPT-SoVITS repo clone required! (see "Method 2" above)
+# Check environment variable
+echo $GPT_SOVITS_PATH  # Should output ~/.vtts/GPT-SoVITS
 
-# Specify GPU
-vtts serve kevinwang676/GPT-SoVITS-v3 --stt-model large-v3 --device cuda:0
+# Start server
+vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
 ```
 
-### Python Usage
+### TTS + STT Simultaneous
+```bash
+vtts serve Supertone/supertonic-2 --stt-model large-v3
+vtts serve Supertone/supertonic-2 --stt-model base --device cuda
+```
+
+### Available Options
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--host` | 0.0.0.0 | Server host |
+| `--port` | 8000 | Server port |
+| `--device` | auto | cuda, cpu, auto |
+| `--stt-model` | None | Whisper model (base, large-v3, etc) |
+| `--log-level` | INFO | DEBUG, INFO, WARNING, ERROR |
+
+---
+
+## 🐍 Python Usage
+
+### Basic Usage
 ```python
 from vtts import VTTSClient
 
-client = VTTSClient(base_url="http://localhost:8000")
+client = VTTSClient("http://localhost:8000")
 
-# Generate speech
+# TTS
 audio = client.tts(
-    text="Hello, thank you for using vTTS!",
-    model="Supertone/supertonic-2",
+    text="Hello, this is vTTS.",
+    voice="F1",
     language="en",
-    voice="default"
+    speed=1.05
 )
-
-# Save to file
 audio.save("output.wav")
+
+# STT
+text = client.stt("audio.wav")
+print(text)
 ```
+
+### Advanced Options (Supertonic)
+```python
+audio = client.tts(
+    text="Hello world",
+    voice="F1",           # M1-M4, F1-F4
+    language="en",        # en, ko, es, pt, fr
+    speed=1.05,           # Speed (default: 1.05)
+    total_steps=5,        # Quality (1-20, default: 5)
+    silence_duration=0.3  # Silence between chunks (seconds)
+)
+```
+
+### Voice Cloning (GPT-SoVITS)
+```python
+from vtts import VTTSClient
+
+# GPT-SoVITS client (reference audio required!)
+client = VTTSClient("http://localhost:8002")
+
+audio = client.tts(
+    text="This is a voice cloning test.",
+    model="lj1995/GPT-SoVITS",
+    voice="reference",
+    language="en",
+    reference_audio="./samples/reference.wav",  # Reference audio (required!)
+    reference_text="This is what the reference audio says"  # Reference text (required!)
+)
+audio.save("cloned_voice.wav")
+```
+> ⚠️ GPT-SoVITS requires `reference_audio` and `reference_text` parameters!
 
 ### OpenAI SDK Compatible
 ```python
@@ -114,82 +235,162 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")
 
 response = client.audio.speech.create(
     model="Supertone/supertonic-2",
-    voice="default",
-    input="Hello, nice to meet you!"
+    voice="F1",
+    input="Hello, nice to meet you."
 )
-
 response.stream_to_file("output.mp3")
 ```
 
-## 🎤 STT (Speech-to-Text) Usage
-
-### Transcription
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")
-
-# Transcribe audio
-with open("audio.mp3", "rb") as audio_file:
-    transcription = client.audio.transcriptions.create(
-        model="large-v3",
-        file=audio_file,
-        language="ko"
-    )
-    print(transcription.text)
+### cURL
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Hello!", "voice": "F1", "model": "Supertone/supertonic-2"}' \
+  --output output.mp3
 ```
 
-### Translation (to English)
-```python
-# Translate to English
-with open("korean.mp3", "rb") as audio_file:
-    translation = client.audio.translations.create(
-        model="large-v3",
-        file=audio_file
-    )
-    print(translation.text)
+---
+
+## 🐳 Docker
+
+### Port Configuration
+| Engine | Port | GPU Memory |
+|--------|------|-----------|
+| Gateway (Nginx) | 8000 | - |
+| Supertonic | 8001 | ~1GB |
+| GPT-SoVITS | 8002 | ~4GB |
+| CosyVoice | 8003 | ~3GB |
+
+### Quick Start
+```bash
+# Build images
+docker-compose build
+
+# Run
+docker-compose up -d supertonic   # Supertonic only
+docker-compose up -d              # All
+
+# Logs
+docker-compose logs -f supertonic
+
+# Stop
+docker-compose down
 ```
+
+📖 Details: [Docker Guide](DOCKER.md)
+
+---
+
+## 📊 CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `vtts serve MODEL` | Start TTS server |
+| `vtts doctor` | Diagnose environment |
+| `vtts doctor --fix` | Auto-fix environment |
+| `vtts setup --engine ENGINE` | Install by engine |
+| `vtts list-models` | List supported models |
+| `vtts info MODEL` | Model information |
+
+---
 
 ## 🏗️ Architecture
 
 ```
 vTTS/
 ├── vtts/
-│   ├── engines/          # TTS/STT engines
-│   │   ├── base.py      # Base interface
-│   │   ├── faster_whisper.py  # Faster-Whisper STT
-│   │   ├── supertonic.py      # Supertonic TTS
-│   │   └── cosyvoice.py       # CosyVoice TTS
-│   ├── server/           # FastAPI server
-│   └── utils/            # Utilities
-└── examples/             # Usage examples
+│   ├── __init__.py           # Auto environment check
+│   ├── cli.py                # CLI (serve, doctor, setup)
+│   ├── client.py             # Python client
+│   ├── server/
+│   │   ├── app.py            # FastAPI app
+│   │   ├── routes.py         # TTS API routes
+│   │   ├── stt_routes.py     # STT API routes
+│   │   └── models.py         # Pydantic models
+│   ├── engines/
+│   │   ├── base.py           # Base engine interface
+│   │   ├── registry.py       # Auto engine registration
+│   │   ├── supertonic.py     # Supertonic engine
+│   │   ├── gptsovits.py      # GPT-SoVITS engine
+│   │   ├── cosyvoice.py      # CosyVoice engine
+│   │   └── _supertonic/      # Embedded ONNX module
+│   └── utils/
+│       └── audio.py          # Audio processing
+├── docker/
+│   ├── Dockerfile.supertonic
+│   ├── Dockerfile.gptsovits
+│   ├── Dockerfile.cosyvoice
+│   └── nginx.conf            # API Gateway
+├── docker-compose.yml
+├── setup.py
+└── README.md
 ```
+
+---
 
 ## 🔧 Development Roadmap
 
 - [x] Project structure design
 - [x] Base engine interface
-- [x] Faster-Whisper STT engine
+- [x] Supertonic-2 engine
+- [x] CosyVoice3 engine
+- [x] GPT-SoVITS engine
 - [x] FastAPI server
 - [x] OpenAI compatible API
-- [x] CLI interface
-- [ ] CosyVoice3 engine
-- [ ] GPT-SoVITS engine
+- [x] CLI implementation (serve, doctor, setup)
+- [x] Automatic model download
+- [x] CUDA support
+- [x] Docker images
+- [x] Auto environment diagnosis/fix
 - [ ] Streaming support
 - [ ] Batch inference optimization
+
+---
+
+## 📚 Documentation
+
+- [Quick Start Guide](QUICKSTART.md)
+- [Troubleshooting Guide](TROUBLESHOOTING.md)
+- [Docker Guide](DOCKER.md)
+- [Kaggle Test Notebook](kaggle_test_notebook.ipynb)
+- [Example Code](examples/)
+
+---
+
+## ⚠️ Troubleshooting
+
+### numpy Compatibility Error
+```
+ValueError: numpy.dtype size changed, may indicate binary incompatibility
+```
+**Solution**: `vtts doctor --fix`
+
+### CUDA Not Found
+```
+WARNING: CUDA requested but CUDAExecutionProvider not available
+```
+**Solution**: `vtts doctor --fix --cuda`
+
+### Dependency Conflicts
+**Solution**: Use Docker
+```bash
+docker-compose up -d supertonic
+```
+
+📖 More issues: [Troubleshooting Guide](TROUBLESHOOTING.md)
+
+---
 
 ## 📝 License
 
 MIT License
 
-## 💖 Support
+## 💖 Sponsorship
 
-If this project helps you:
+Did this project help you?
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-pink?style=for-the-badge)](https://github.com/sponsors/bellkjtt)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-orange?style=for-the-badge)](https://ko-fi.com/bellkjtt)
-
-Your support helps keep this project alive!
 
 ## 🙏 Acknowledgments
 

@@ -1,4 +1,4 @@
-# vTTS - ユニバーサル TTS/STT サービングシステム
+# vTTS - ユニバーサルTTS/STTサービングシステム
 
 [![Version](https://img.shields.io/badge/version-0.1.0--beta-orange.svg)](https://github.com/bellkjtt/vTTS/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -6,87 +6,228 @@
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/bellkjtt)](https://github.com/sponsors/bellkjtt)
 [![Status](https://img.shields.io/badge/status-beta-yellow.svg)](https://github.com/bellkjtt/vTTS)
 
-**音声のための vLLM** - Huggingface からモデルを自動ダウンロードする汎用 TTS/STT サービングシステム
+**音声のためのvLLM** - Huggingfaceから直接ダウンロードして推論可能なユニバーサルTTS/STTサービングシステム
 
 [한국어](README.md) | [English](README_EN.md) | [中文](README_ZH.md) | 日本語
 
 ## 🎯 目標
 
-- 🚀 **簡単な使い方**: `vtts serve model-name` 一行でサーバー起動
-- 🤗 **Huggingface 統合**: モデルの自動ダウンロードとキャッシュ
-- 🌐 **OpenAI 互換**: OpenAI TTS & Whisper API と完全互換
-- 🎙️ **TTS + STT 統合**: テキスト音声変換と音声認識を同時サポート
-- 🇰🇷 **韓国語優先**: 韓国語対応モデルに焦点
-- 🔌 **プラグインアーキテクチャ**: 新しいエンジンを簡単に追加
+- 🚀 **シンプルな使い方**: `vtts serve model-name` 一行でサーバー起動
+- 🤗 **Huggingface統合**: モデルの自動ダウンロードとキャッシング
+- 🌐 **OpenAI互換API**: OpenAI TTS & Whisper APIと完全互換
+- 🎙️ **TTS + STT統合**: テキスト音声変換と音声認識の統合
+- 🐳 **Docker対応**: 依存関係の競合なしで複数のエンジンを同時実行
+- 🎮 **CUDA対応**: GPUアクセラレーションによる高速推論
 
-## 📦 サポートモデル
+## 📦 対応モデル
 
-### TTS (テキスト音声変換)
-- ✅ **GPT-SoVITS-v3** - Few-shot 音声クローニング
-- ✅ **Supertonic-2** - 超高速オンデバイス TTS (5言語)
-- ✅ **CosyVoice3** - Zero-shot 多言語 TTS (9言語、18+ 中国方言)
-- 🔜 **StyleTTS2**, **XTTS-v2**, **Bark**
+### TTS (Text-to-Speech)
+| エンジン | 速度 | 品質 | 多言語 | 音声クローン | 参照音声 |
+|---------|------|------|--------|-------------|---------|
+| ✅ **Supertonic-2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | 5言語 | ❌ | 不要 |
+| ✅ **GPT-SoVITS v3** | ⭐⭐ | ⭐⭐⭐⭐⭐ | 5言語 | ✅ Zero-shot | **必須** |
+| ✅ **CosyVoice3** | ⭐⭐⭐ | ⭐⭐⭐⭐ | 9言語 | ⚠️ | オプション |
+| 🔜 **StyleTTS2**, **XTTS-v2**, **Bark** | - | - | - | - | - |
 
-### STT (音声テキスト変換)
-- ✅ **Faster-Whisper** - 高性能 Whisper (CTranslate2)
+> **GPT-SoVITS**: Zero-shot音声クローンモデル。3-10秒の参照音声が必要です。
+
+### STT (Speech-to-Text)
+- ✅ **Faster-Whisper** - 超高速Whisper (CTranslate2)
 - 🔜 **Whisper.cpp**, **Parakeet**
+
+---
 
 ## 🚀 クイックスタート
 
-### インストール
+### 方法1: Supertonicのみ使用 (最もシンプル)
 
-#### GitHub からインストール (現在)
 ```bash
+# CUDA対応 (推奨)
+pip install "vtts[supertonic-cuda] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# CPUのみ
+pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# サーバー起動
+vtts serve Supertone/supertonic-2 --device cuda
+```
+
+### 方法2: GPT-SoVITSセットアップ (音声クローン)
+
+```bash
+# 1. vTTSベースインストール
 pip install git+https://github.com/bellkjtt/vTTS.git
+
+# 2. GPT-SoVITS自動インストール (リポジトリクローン + 依存関係自動処理!)
+vtts setup --engine gptsovits
+
+# 3. サーバー起動
+vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
 ```
 
-#### PyPI からインストール (近日公開)
+> 💡 `vtts setup` は GPT-SoVITSを `~/.vtts/GPT-SoVITS` に自動クローンし、依存関係をインストールします。
+
+### 方法3: Docker (複数エンジン推奨)
+
 ```bash
-pip install vtts
+# Supertonic (最速)
+docker-compose up -d supertonic   # :8001
+
+# GPT-SoVITS (音声クローン) - reference_audioボリューム必要
+mkdir -p reference_audio
+docker-compose up -d gptsovits    # :8002
+
+# CosyVoice (高品質)
+docker-compose up -d cosyvoice    # :8003
+
+# 全て + APIゲートウェイ
+docker-compose --profile gateway up -d  # :8000
 ```
 
-#### Kaggle でテスト
-[Kaggle ノートブック](kaggle_test_notebook.ipynb) を参照
+📖 詳細: [Dockerガイド](DOCKER.md)
 
-### サーバー起動
+### 方法4: CLI自動インストール
 
-#### TTS のみ
 ```bash
-# モデルを自動ダウンロードしてサーバー起動
+# ベースインストール後、エンジン追加
+pip install git+https://github.com/bellkjtt/vTTS.git
+
+vtts setup --engine supertonic --cuda   # Supertonic + CUDA
+vtts setup --engine gptsovits           # GPT-SoVITS (リポジトリクローン含む)
+vtts setup --engine all                 # 全エンジン
+```
+
+---
+
+## 🔧 環境設定
+
+### 診断と自動修復
+
+```bash
+# 環境診断
+vtts doctor
+
+# 自動修復 (numpy, onnxruntime互換性)
+vtts doctor --fix
+
+# CUDA強制インストール
+vtts doctor --fix --cuda
+```
+
+出力例:
+```
+🩺 vTTS環境診断
+
+✓ Python: 3.10.12
+✓ numpy: 1.26.4
+✓ onnxruntime: 1.16.0 (CUDA対応)
+  Providers: CUDAExecutionProvider, CPUExecutionProvider
+✓ PyTorch: 2.1.0 (CUDA 12.1)
+  GPU: NVIDIA GeForce RTX 4090
+✓ vTTS: インストール済み
+
+✅ すべての環境が整っています!
+```
+
+### Kaggle/Colabで
+
+```python
+# インストール + 自動設定
+!pip install -q git+https://github.com/bellkjtt/vTTS.git
+!vtts doctor --fix --cuda
+```
+
+---
+
+## 💻 サーバー起動
+
+### Supertonic (高速TTS)
+```bash
 vtts serve Supertone/supertonic-2
-
-# ポート指定
-vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --port 8000
+vtts serve Supertone/supertonic-2 --device cuda --port 8000
 ```
 
-#### TTS + STT 同時
+### GPT-SoVITS (音声クローン)
 ```bash
-# TTS と STT を同時にサービング
-vtts serve Supertone/supertonic-2 --stt-model large-v3
+# GPT-SoVITSリポジトリクローン必要! (上記「方法2」参照)
+# 環境変数確認
+echo $GPT_SOVITS_PATH  # ~/.vtts/GPT-SoVITS が出力されるべき
 
-# GPU 指定
-vtts serve kevinwang676/GPT-SoVITS-v3 --stt-model large-v3 --device cuda:0
+# サーバー起動
+vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
 ```
 
-### Python での使用
+### TTS + STT同時
+```bash
+vtts serve Supertone/supertonic-2 --stt-model large-v3
+vtts serve Supertone/supertonic-2 --stt-model base --device cuda
+```
+
+### 利用可能なオプション
+| オプション | デフォルト | 説明 |
+|----------|---------|------|
+| `--host` | 0.0.0.0 | サーバーホスト |
+| `--port` | 8000 | サーバーポート |
+| `--device` | auto | cuda, cpu, auto |
+| `--stt-model` | None | Whisperモデル (base, large-v3等) |
+| `--log-level` | INFO | DEBUG, INFO, WARNING, ERROR |
+
+---
+
+## 🐍 Python使用法
+
+### 基本的な使い方
 ```python
 from vtts import VTTSClient
 
-client = VTTSClient(base_url="http://localhost:8000")
+client = VTTSClient("http://localhost:8000")
 
-# 音声生成
+# TTS
 audio = client.tts(
-    text="こんにちは、vTTS をご利用いただきありがとうございます！",
-    model="Supertone/supertonic-2",
+    text="こんにちは、vTTSです。",
+    voice="F1",
     language="ja",
-    voice="default"
+    speed=1.05
 )
-
-# ファイルに保存
 audio.save("output.wav")
+
+# STT
+text = client.stt("audio.wav")
+print(text)
 ```
 
-### OpenAI SDK 互換
+### 高度なオプション (Supertonic)
+```python
+audio = client.tts(
+    text="こんにちは世界",
+    voice="F1",           # M1-M4, F1-F4
+    language="ja",        # en, ko, es, pt, fr, ja
+    speed=1.05,           # 速度 (デフォルト: 1.05)
+    total_steps=5,        # 品質 (1-20, デフォルト: 5)
+    silence_duration=0.3  # チャンク間の無音 (秒)
+)
+```
+
+### 音声クローン (GPT-SoVITS)
+```python
+from vtts import VTTSClient
+
+# GPT-SoVITSクライアント (参照音声必須!)
+client = VTTSClient("http://localhost:8002")
+
+audio = client.tts(
+    text="これは音声クローンのテストです。",
+    model="lj1995/GPT-SoVITS",
+    voice="reference",
+    language="ja",
+    reference_audio="./samples/reference.wav",  # 参照音声 (必須!)
+    reference_text="参照音声で話している内容"  # 参照テキスト (必須!)
+)
+audio.save("cloned_voice.wav")
+```
+> ⚠️ GPT-SoVITSは `reference_audio` と `reference_text` パラメータが必須です!
+
+### OpenAI SDK互換
 ```python
 from openai import OpenAI
 
@@ -94,82 +235,162 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")
 
 response = client.audio.speech.create(
     model="Supertone/supertonic-2",
-    voice="default",
-    input="こんにちは、お会いできて嬉しいです！"
+    voice="F1",
+    input="こんにちは、お会いできて嬉しいです。"
 )
-
 response.stream_to_file("output.mp3")
 ```
 
-## 🎤 STT (音声テキスト変換) 使用方法
-
-### 文字起こし
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")
-
-# 音声を文字起こし
-with open("audio.mp3", "rb") as audio_file:
-    transcription = client.audio.transcriptions.create(
-        model="large-v3",
-        file=audio_file,
-        language="ja"
-    )
-    print(transcription.text)
+### cURL
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"input": "こんにちは!", "voice": "F1", "model": "Supertone/supertonic-2"}' \
+  --output output.mp3
 ```
 
-### 翻訳 (英語へ)
-```python
-# 英語に翻訳
-with open("japanese.mp3", "rb") as audio_file:
-    translation = client.audio.translations.create(
-        model="large-v3",
-        file=audio_file
-    )
-    print(translation.text)
+---
+
+## 🐳 Docker
+
+### ポート構成
+| エンジン | ポート | GPUメモリ |
+|---------|------|----------|
+| Gateway (Nginx) | 8000 | - |
+| Supertonic | 8001 | ~1GB |
+| GPT-SoVITS | 8002 | ~4GB |
+| CosyVoice | 8003 | ~3GB |
+
+### クイックスタート
+```bash
+# イメージビルド
+docker-compose build
+
+# 実行
+docker-compose up -d supertonic   # Supertonicのみ
+docker-compose up -d              # 全て
+
+# ログ
+docker-compose logs -f supertonic
+
+# 停止
+docker-compose down
 ```
+
+📖 詳細: [Dockerガイド](DOCKER.md)
+
+---
+
+## 📊 CLIコマンド
+
+| コマンド | 説明 |
+|---------|------|
+| `vtts serve MODEL` | TTSサーバー起動 |
+| `vtts doctor` | 環境診断 |
+| `vtts doctor --fix` | 環境自動修復 |
+| `vtts setup --engine ENGINE` | エンジン別インストール |
+| `vtts list-models` | 対応モデル一覧 |
+| `vtts info MODEL` | モデル情報 |
+
+---
 
 ## 🏗️ アーキテクチャ
 
 ```
 vTTS/
 ├── vtts/
-│   ├── engines/          # TTS/STT エンジン
-│   │   ├── base.py      # ベースインターフェース
-│   │   ├── faster_whisper.py  # Faster-Whisper STT
-│   │   ├── supertonic.py      # Supertonic TTS
-│   │   └── cosyvoice.py       # CosyVoice TTS
-│   ├── server/           # FastAPI サーバー
-│   └── utils/            # ユーティリティ
-└── examples/             # 使用例
+│   ├── __init__.py           # 自動環境チェック
+│   ├── cli.py                # CLI (serve, doctor, setup)
+│   ├── client.py             # Pythonクライアント
+│   ├── server/
+│   │   ├── app.py            # FastAPIアプリ
+│   │   ├── routes.py         # TTS APIルート
+│   │   ├── stt_routes.py     # STT APIルート
+│   │   └── models.py         # Pydanticモデル
+│   ├── engines/
+│   │   ├── base.py           # ベースエンジンインターフェース
+│   │   ├── registry.py       # 自動エンジン登録
+│   │   ├── supertonic.py     # Supertonicエンジン
+│   │   ├── gptsovits.py      # GPT-SoVITSエンジン
+│   │   ├── cosyvoice.py      # CosyVoiceエンジン
+│   │   └── _supertonic/      # 組み込みONNXモジュール
+│   └── utils/
+│       └── audio.py          # オーディオ処理
+├── docker/
+│   ├── Dockerfile.supertonic
+│   ├── Dockerfile.gptsovits
+│   ├── Dockerfile.cosyvoice
+│   └── nginx.conf            # APIゲートウェイ
+├── docker-compose.yml
+├── setup.py
+└── README.md
 ```
+
+---
 
 ## 🔧 開発ロードマップ
 
 - [x] プロジェクト構造設計
 - [x] ベースエンジンインターフェース
-- [x] Faster-Whisper STT エンジン
-- [x] FastAPI サーバー
-- [x] OpenAI 互換 API
-- [x] CLI インターフェース
-- [ ] CosyVoice3 エンジン
-- [ ] GPT-SoVITS エンジン
-- [ ] ストリーミングサポート
+- [x] Supertonic-2エンジン
+- [x] CosyVoice3エンジン
+- [x] GPT-SoVITSエンジン
+- [x] FastAPIサーバー
+- [x] OpenAI互換API
+- [x] CLI実装 (serve, doctor, setup)
+- [x] 自動モデルダウンロード
+- [x] CUDA対応
+- [x] Dockerイメージ
+- [x] 自動環境診断/修復
+- [ ] ストリーミング対応
 - [ ] バッチ推論最適化
+
+---
+
+## 📚 ドキュメント
+
+- [クイックスタートガイド](QUICKSTART.md)
+- [トラブルシューティングガイド](TROUBLESHOOTING.md)
+- [Dockerガイド](DOCKER.md)
+- [Kaggleテストノートブック](kaggle_test_notebook.ipynb)
+- [サンプルコード](examples/)
+
+---
+
+## ⚠️ トラブルシューティング
+
+### numpy互換性エラー
+```
+ValueError: numpy.dtype size changed, may indicate binary incompatibility
+```
+**解決方法**: `vtts doctor --fix`
+
+### CUDAが見つからない
+```
+WARNING: CUDA requested but CUDAExecutionProvider not available
+```
+**解決方法**: `vtts doctor --fix --cuda`
+
+### 依存関係の競合
+**解決方法**: Dockerを使用
+```bash
+docker-compose up -d supertonic
+```
+
+📖 その他の問題: [トラブルシューティングガイド](TROUBLESHOOTING.md)
+
+---
 
 ## 📝 ライセンス
 
-MIT License
+MITライセンス
 
-## 💖 サポート
+## 💖 スポンサー
 
-このプロジェクトが役に立った場合:
+このプロジェクトは役に立ちましたか?
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-pink?style=for-the-badge)](https://github.com/sponsors/bellkjtt)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-orange?style=for-the-badge)](https://ko-fi.com/bellkjtt)
-
-あなたのサポートがこのプロジェクトを維持するのに役立ちます！
 
 ## 🙏 謝辞
 
