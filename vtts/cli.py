@@ -306,10 +306,12 @@ def setup(engine: str, cuda: bool):
     Examples:
         vtts setup --engine supertonic         # Supertonic (CPU)
         vtts setup --engine supertonic --cuda  # Supertonic (GPU)
-        vtts setup --engine gptsovits          # GPT-SoVITS
+        vtts setup --engine gptsovits          # GPT-SoVITS (저장소 자동 클론)
         vtts setup --engine all                # 모든 엔진
     """
     import torch
+    import os
+    from pathlib import Path
     
     console.print(f"\n[bold]📦 vTTS 엔진 설치: {engine}[/bold]\n")
     
@@ -318,15 +320,19 @@ def setup(engine: str, cuda: bool):
         console.print("[yellow]⚠️ CUDA가 감지되지 않았습니다. CPU 모드로 설치합니다.[/yellow]")
         cuda = False
     
+    total_steps = 4 if engine in ["gptsovits", "all"] else 3
+    step = 1
+    
     # numpy 먼저 설치 (호환성)
-    console.print("[cyan]→[/cyan] [1/3] numpy 호환성 확인...")
+    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] numpy 호환성 확인...")
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y", "-q"],
                   capture_output=True)
     subprocess.run([sys.executable, "-m", "pip", "install", "numpy>=1.24.0,<2.0.0", "-q"],
                   capture_output=True)
+    step += 1
     
     # onnxruntime 설치
-    console.print("[cyan]→[/cyan] [2/3] onnxruntime 설치...")
+    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] onnxruntime 설치...")
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
                   capture_output=True)
     
@@ -336,9 +342,71 @@ def setup(engine: str, cuda: bool):
     elif engine == "supertonic":
         subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime>=1.16.0", "-q"],
                       capture_output=True)
+    step += 1
+    
+    # ============================================================
+    # GPT-SoVITS: 저장소 자동 클론 및 설치
+    # ============================================================
+    if engine in ["gptsovits", "all"]:
+        console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] GPT-SoVITS 저장소 설치...")
+        
+        # 설치 경로 결정
+        gpt_sovits_path = os.environ.get("GPT_SOVITS_PATH")
+        
+        if not gpt_sovits_path:
+            # 기본 경로: ~/.vtts/GPT-SoVITS
+            vtts_dir = Path.home() / ".vtts"
+            vtts_dir.mkdir(exist_ok=True)
+            gpt_sovits_path = vtts_dir / "GPT-SoVITS"
+        else:
+            gpt_sovits_path = Path(gpt_sovits_path)
+        
+        if gpt_sovits_path.exists():
+            console.print(f"  [dim]GPT-SoVITS already exists: {gpt_sovits_path}[/dim]")
+            console.print("  [dim]Pulling latest changes...[/dim]")
+            result = subprocess.run(
+                ["git", "-C", str(gpt_sovits_path), "pull"],
+                capture_output=True, text=True
+            )
+        else:
+            console.print(f"  [dim]Cloning to: {gpt_sovits_path}[/dim]")
+            result = subprocess.run(
+                ["git", "clone", "--depth", "1",
+                 "https://github.com/RVC-Boss/GPT-SoVITS.git",
+                 str(gpt_sovits_path)],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode != 0:
+                console.print(f"[red]❌ Git clone failed: {result.stderr}[/red]")
+                return
+        
+        # GPT-SoVITS requirements 설치
+        console.print("  [dim]Installing GPT-SoVITS requirements...[/dim]")
+        req_file = gpt_sovits_path / "requirements.txt"
+        
+        if req_file.exists():
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", str(req_file), "-q"],
+                capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                console.print(f"[yellow]⚠️ Some requirements failed, but continuing...[/yellow]")
+        
+        # 환경변수 설정 안내
+        console.print(f"\n[green]✓[/green] GPT-SoVITS installed: {gpt_sovits_path}")
+        
+        # 자동으로 환경변수 설정 (현재 세션)
+        os.environ["GPT_SOVITS_PATH"] = str(gpt_sovits_path)
+        
+        console.print("\n[bold yellow]⚠️ 환경변수를 영구 설정하려면:[/bold yellow]")
+        console.print(f"  [dim]export GPT_SOVITS_PATH={gpt_sovits_path}[/dim]")
+        console.print(f"  [dim]위 명령을 ~/.bashrc 또는 ~/.zshrc에 추가하세요[/dim]")
+        
+        step += 1
     
     # 엔진별 의존성 설치
-    console.print(f"[cyan]→[/cyan] [3/3] {engine} 의존성 설치...")
+    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] {engine} 의존성 설치...")
     
     extras = {
         "supertonic": "supertonic-cuda" if cuda else "supertonic",
@@ -359,7 +427,12 @@ def setup(engine: str, cuda: bool):
     
     if result.returncode == 0:
         console.print(f"\n[bold green]✅ {engine} 엔진 설치 완료![/bold green]")
-        console.print("\n[dim]사용법: vtts serve Supertone/supertonic-2[/dim]\n")
+        
+        if engine == "gptsovits":
+            console.print("\n[dim]사용법: vtts serve lj1995/GPT-SoVITS --device cuda[/dim]")
+            console.print("[dim]참고: reference_audio와 reference_text 파라미터가 필수입니다![/dim]\n")
+        else:
+            console.print("\n[dim]사용법: vtts serve Supertone/supertonic-2[/dim]\n")
     else:
         console.print(f"\n[bold red]❌ 설치 실패[/bold red]")
         console.print(f"[dim]{result.stderr}[/dim]")

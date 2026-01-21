@@ -55,24 +55,18 @@ vtts serve Supertone/supertonic-2 --device cuda
 
 ### 방법 2: GPT-SoVITS 설치 (음성 클로닝)
 
-> ⚠️ GPT-SoVITS는 저장소 클론이 **필수**입니다 (pip 패키지 없음)
-
 ```bash
 # 1. vTTS 기본 설치
-pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
+pip install git+https://github.com/bellkjtt/vTTS.git
 
-# 2. GPT-SoVITS 저장소 클론 (필수!)
-git clone https://github.com/RVC-Boss/GPT-SoVITS.git third_party/GPT-SoVITS
-cd third_party/GPT-SoVITS
-pip install -r requirements.txt
-cd ../..
+# 2. GPT-SoVITS 자동 설치 (저장소 클론 + 의존성 자동 처리!)
+vtts setup --engine gptsovits
 
-# 3. 환경변수 설정 (선택적)
-export GPT_SOVITS_PATH=$(pwd)/third_party/GPT-SoVITS
-
-# 4. 서버 실행
+# 3. 서버 실행
 vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
 ```
+
+> 💡 `vtts setup`은 GPT-SoVITS를 `~/.vtts/GPT-SoVITS`에 자동으로 클론하고 의존성을 설치합니다.
 
 ### 방법 3: Docker (의존성 충돌 방지, 권장)
 
@@ -156,9 +150,9 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 
 ### GPT-SoVITS (음성 클로닝)
 ```bash
-# GPT-SoVITS 저장소 클론 필요!
-git clone https://github.com/RVC-Boss/GPT-SoVITS.git third_party/GPT-SoVITS
-cd third_party/GPT-SoVITS && pip install -r requirements.txt && cd ../..
+# GPT-SoVITS 저장소 클론 필요! (위의 "방법 2" 참고)
+# 환경변수 설정 확인
+echo $GPT_SOVITS_PATH  # ~/GPT-SoVITS 출력되어야 함
 
 # 서버 실행
 vtts serve lj1995/GPT-SoVITS --device cuda --port 8002

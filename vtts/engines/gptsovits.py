@@ -91,11 +91,15 @@ class GPTSoVITSEngine(BaseTTSEngine):
         if gpt_sovits_path and os.path.exists(gpt_sovits_path):
             return gpt_sovits_path
         
-        # 2. third_party 폴더 확인
+        # 2. 가능한 경로들 확인
         possible_paths = [
-            Path(__file__).parent.parent.parent / "third_party" / "GPT-SoVITS",
+            # vtts setup으로 설치된 경로 (우선)
+            Path.home() / ".vtts" / "GPT-SoVITS",
+            # 사용자 홈 디렉토리
             Path.home() / "GPT-SoVITS",
+            # 시스템 경로
             Path("/opt/GPT-SoVITS"),
+            # 현재 디렉토리
             Path("GPT-SoVITS"),
         ]
         
@@ -104,10 +108,12 @@ class GPTSoVITSEngine(BaseTTSEngine):
                 return str(path)
         
         raise FileNotFoundError(
-            "GPT-SoVITS not found. Please:\n"
-            "1. Clone: git clone https://github.com/RVC-Boss/GPT-SoVITS.git\n"
-            "2. Set GPT_SOVITS_PATH environment variable\n"
-            "   OR place it in third_party/GPT-SoVITS"
+            "GPT-SoVITS not found. Please run:\n\n"
+            "  vtts setup --engine gptsovits\n\n"
+            "Or manually:\n"
+            "  git clone https://github.com/RVC-Boss/GPT-SoVITS.git ~/.vtts/GPT-SoVITS\n"
+            "  cd ~/.vtts/GPT-SoVITS && pip install -r requirements.txt\n"
+            "  export GPT_SOVITS_PATH=~/.vtts/GPT-SoVITS"
         )
     
     def load_model(self) -> None:
