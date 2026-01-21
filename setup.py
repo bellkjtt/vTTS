@@ -81,18 +81,39 @@ COSYVOICE_DEPS = [
 ]
 
 # GPT-SoVITS: 가장 복잡한 의존성
+# Note: GPT-SoVITS 저장소 클론 필요 (pip install로 설치 안됨)
+# git clone https://github.com/RVC-Boss/GPT-SoVITS.git
 GPTSOVITS_DEPS = [
+    # Transformers (버전 범위 매우 중요!)
+    "transformers>=4.43.0,<4.51.0",
+    "peft>=0.10.0,<0.18.0",
+    "sentencepiece>=0.1.99",
+    
+    # Audio Processing
     "funasr>=1.0.27,<2.0.0",
-    "peft>=0.10.0,<0.18.0",  # 버전 범위 제한 중요!
+    "pytorch-lightning>=2.4.0",
+    
+    # Text Processing (G2P, NLP)
     "g2p_en>=2.1.0",
     "pyopenjtalk>=0.4.1",
     "cn2an>=0.5.0",
     "pypinyin>=0.50.0",
-    "sentencepiece>=0.1.99",
     "jieba>=0.42.1",
+    "jieba_fast>=0.53",
+    "wordsegment>=1.3.1",
+    "split-lang>=0.0.3",
     "fast_langdetect>=0.3.1",
+    
+    # Korean
     "g2pk2>=0.0.3",
     "ko_pron>=1.0.0",
+    
+    # Model Architecture
+    "rotary_embedding_torch>=0.6.0",
+    "x_transformers>=1.30.0",
+    
+    # FFmpeg
+    "ffmpeg-python>=0.2.0",
 ]
 
 # ============================================================

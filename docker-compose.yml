@@ -55,7 +55,9 @@ services:
 
   # ============================================================
   # GPT-SoVITS TTS Engine (Port 8002)
-  # 음성 클로닝, 고품질
+  # Zero-shot/Few-shot 음성 클로닝, 고품질
+  # 지원 언어: zh, en, ja, ko, yue (Cantonese)
+  # 주의: reference_audio 필수!
   # ============================================================
   gptsovits:
     build:
@@ -69,8 +71,11 @@ services:
       - huggingface-cache:/root/.cache/huggingface
       # GPT-SoVITS 모델 캐시
       - gptsovits-cache:/root/.cache/GPT-SoVITS
+      # Reference audio 디렉토리 (필수!)
+      - ./reference_audio:/app/reference_audio
     environment:
       - CUDA_VISIBLE_DEVICES=0
+      - GPT_SOVITS_PATH=/opt/GPT-SoVITS
     deploy:
       resources:
         reservations:
@@ -84,7 +89,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s
+      start_period: 180s
 
   # ============================================================
   # CosyVoice TTS Engine (Port 8003)

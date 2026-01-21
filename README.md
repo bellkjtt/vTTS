@@ -23,12 +23,14 @@
 ## 📦 지원 모델
 
 ### TTS (Text-to-Speech)
-| 엔진 | 속도 | 품질 | 다국어 | 음성 클로닝 |
-|------|------|------|--------|------------|
-| ✅ **Supertonic-2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | 5개 언어 | ❌ |
-| ✅ **GPT-SoVITS-v3** | ⭐⭐ | ⭐⭐⭐⭐⭐ | 제한적 | ✅ |
-| ✅ **CosyVoice3** | ⭐⭐⭐ | ⭐⭐⭐⭐ | 9개 언어 | ⚠️ |
-| 🔜 **StyleTTS2**, **XTTS-v2**, **Bark** | - | - | - | - |
+| 엔진 | 속도 | 품질 | 다국어 | 음성 클로닝 | 참조 오디오 |
+|------|------|------|--------|------------|------------|
+| ✅ **Supertonic-2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | 5개 언어 | ❌ | 불필요 |
+| ✅ **GPT-SoVITS v3** | ⭐⭐ | ⭐⭐⭐⭐⭐ | 5개 언어 | ✅ Zero-shot | **필수** |
+| ✅ **CosyVoice3** | ⭐⭐⭐ | ⭐⭐⭐⭐ | 9개 언어 | ⚠️ | 선택적 |
+| 🔜 **StyleTTS2**, **XTTS-v2**, **Bark** | - | - | - | - | - |
+
+> **GPT-SoVITS**: Zero-shot 음성 클로닝 모델로, 합성할 목표 음성의 참조 오디오(3~10초)가 필수입니다.
 
 ### STT (Speech-to-Text)
 - ✅ **Faster-Whisper** - 초고속 Whisper (CTranslate2)
@@ -121,10 +123,20 @@ vtts doctor --fix --cuda
 
 ## 💻 서버 실행
 
-### TTS 전용
+### Supertonic (빠른 TTS)
 ```bash
 vtts serve Supertone/supertonic-2
 vtts serve Supertone/supertonic-2 --device cuda --port 8000
+```
+
+### GPT-SoVITS (음성 클로닝)
+```bash
+# GPT-SoVITS 저장소 클론 필요!
+git clone https://github.com/RVC-Boss/GPT-SoVITS.git third_party/GPT-SoVITS
+cd third_party/GPT-SoVITS && pip install -r requirements.txt && cd ../..
+
+# 서버 실행
+vtts serve lj1995/GPT-SoVITS --device cuda --port 8002
 ```
 
 ### TTS + STT 동시
@@ -177,6 +189,25 @@ audio = client.tts(
     silence_duration=0.3  # 청크 간 무음 (초)
 )
 ```
+
+### 음성 클로닝 (GPT-SoVITS)
+```python
+from vtts import VTTSClient
+
+# GPT-SoVITS 클라이언트 (참조 오디오 필수!)
+client = VTTSClient("http://localhost:8002")
+
+audio = client.tts(
+    text="안녕하세요, 음성 클로닝 테스트입니다.",
+    model="lj1995/GPT-SoVITS",
+    voice="reference",
+    language="ko",
+    reference_audio="./samples/reference.wav",  # 참조 오디오 (필수!)
+    reference_text="참조 오디오에서 말하는 내용"  # 참조 텍스트 (필수!)
+)
+audio.save("cloned_voice.wav")
+```
+> ⚠️ GPT-SoVITS는 `reference_audio`와 `reference_text` 파라미터가 필수입니다!
 
 ### OpenAI SDK 호환
 ```python

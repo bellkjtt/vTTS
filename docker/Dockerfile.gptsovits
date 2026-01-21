@@ -1,22 +1,28 @@
 # ============================================================
-# vTTS - GPT-SoVITS Engine Docker Image
+# vTTS - GPT-SoVITS v3/v4 Engine Docker Image
 # ============================================================
-# 고품질 음성 클로닝 TTS 엔진
+# 고품질 Zero-shot/Few-shot 음성 클로닝 TTS 엔진
 # 
 # Build:
 #   docker build -f docker/Dockerfile.gptsovits -t vtts:gptsovits .
 #
 # Run:
-#   docker run -p 8001:8000 --gpus all vtts:gptsovits
+#   docker run -p 8001:8000 --gpus all \
+#     -v ./reference_audio:/app/reference_audio \
+#     vtts:gptsovits
 #
-# 주의: 이 이미지는 의존성이 많아 빌드 시간이 오래 걸립니다 (~15분)
+# 주의: 
+#   - 의존성이 많아 빌드 시간이 오래 걸립니다 (~20분)
+#   - GPT-SoVITS는 reference audio가 필수입니다
+#   - 모델 다운로드: ~5GB
 # ============================================================
 
 FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 
 LABEL maintainer="vTTS Contributors"
-LABEL description="vTTS with GPT-SoVITS TTS Engine (Voice Cloning)"
+LABEL description="vTTS with GPT-SoVITS v3 TTS Engine (Voice Cloning)"
 LABEL engine="gptsovits"
+LABEL version="v3"
 
 # ============================================================
 # 환경 변수
@@ -29,8 +35,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV HF_HOME=/root/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/root/.cache/huggingface
 
+# GPT-SoVITS 경로
+ENV GPT_SOVITS_PATH=/opt/GPT-SoVITS
+
 # ============================================================
-# 시스템 패키지 설치 (GPT-SoVITS 의존성 포함)
+# 시스템 패키지 설치
 # ============================================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.10 \
@@ -39,7 +48,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
     git \
+    git-lfs \
     curl \
+    wget \
     # GPT-SoVITS 추가 의존성
     build-essential \
     cmake \
@@ -47,6 +58,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mecab \
     mecab-ipadic-utf8 \
     swig \
+    libopenblas-dev \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/python3.10 /usr/bin/python3 \
     && ln -sf /usr/bin/python3.10 /usr/bin/python
@@ -55,13 +67,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
 
 # ============================================================
-# 작업 디렉토리
+# GPT-SoVITS 저장소 클론
 # ============================================================
-WORKDIR /app
+RUN git clone --depth 1 https://github.com/RVC-Boss/GPT-SoVITS.git ${GPT_SOVITS_PATH}
 
 # ============================================================
 # Python 의존성 설치 (레이어 캐싱 최적화)
 # ============================================================
+WORKDIR ${GPT_SOVITS_PATH}
 
 # 1. PyTorch 먼저 설치 (CUDA 버전)
 RUN pip3 install --no-cache-dir \
@@ -69,44 +82,47 @@ RUN pip3 install --no-cache-dir \
     torchaudio==2.1.0+cu121 \
     --index-url https://download.pytorch.org/whl/cu121
 
-# 2. setup.py 복사
+# 2. GPT-SoVITS requirements 설치
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# ============================================================
+# vTTS 설치
+# ============================================================
+WORKDIR /app
+
+# setup.py 복사
 COPY setup.py pyproject.toml ./
-COPY vtts/__init__.py vtts/
+COPY vtts/ vtts/
 
-# 3. GPT-SoVITS 의존성 설치 (시간 오래 걸림)
-RUN pip3 install --no-cache-dir \
-    funasr>=1.0.27 \
-    peft>=0.10.0,<0.18.0 \
-    g2p_en \
-    cn2an \
-    pypinyin \
-    sentencepiece \
-    jieba \
-    fast_langdetect \
-    g2pk2 \
-    ko_pron
-
-# 4. pyopenjtalk 별도 설치 (컴파일 필요)
-RUN pip3 install --no-cache-dir pyopenjtalk
-
-# 5. vTTS 설치
+# vTTS 기본 설치 (gptsovits deps는 이미 설치됨)
 RUN pip3 install --no-cache-dir -e .
 
-# ============================================================
-# 앱 복사
-# ============================================================
+# 전체 앱 복사
 COPY . .
+
+# ============================================================
+# 모델 사전 다운로드 (선택적)
+# ============================================================
+# 빌드 시 모델 다운로드하려면 아래 주석 해제
+# RUN python3 -c "from huggingface_hub import snapshot_download; \
+#     snapshot_download('lj1995/GPT-SoVITS', cache_dir='/root/.cache/huggingface')"
+
+# ============================================================
+# Reference Audio 볼륨
+# ============================================================
+RUN mkdir -p /app/reference_audio
+VOLUME ["/app/reference_audio"]
 
 # ============================================================
 # 포트 및 헬스체크
 # ============================================================
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # ============================================================
 # 엔트리포인트
 # ============================================================
 ENTRYPOINT ["vtts", "serve"]
-CMD ["kevinwang676/GPT-SoVITS-v3", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]
+CMD ["lj1995/GPT-SoVITS", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]

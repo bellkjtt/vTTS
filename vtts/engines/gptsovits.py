@@ -1,8 +1,23 @@
-"""GPT-SoVITS TTS Engine - Real Implementation"""
+"""GPT-SoVITS v3/v4 TTS Engine
 
-from pathlib import Path
-from typing import List, Optional, Union
+Zero-shot 및 Few-shot 음성 클로닝을 지원하는 고품질 TTS 엔진.
+
+Reference:
+- GitHub: https://github.com/RVC-Boss/GPT-SoVITS
+- HuggingFace: https://huggingface.co/kevinwang676/GPT-SoVITS-v3
+
+Supported Languages: zh (Chinese), en (English), ja (Japanese), ko (Korean), yue (Cantonese)
+
+Requirements:
+- GPT-SoVITS 저장소 클론 필요
+- pip install vtts[gptsovits]
+"""
+
 import os
+import sys
+import tempfile
+from pathlib import Path
+from typing import List, Optional, Union, Generator
 
 import numpy as np
 import torch
@@ -12,31 +27,89 @@ from vtts.engines.base import BaseTTSEngine, TTSOutput, TTSRequest
 
 
 class GPTSoVITSEngine(BaseTTSEngine):
-    """GPT-SoVITS TTS Engine
+    """GPT-SoVITS v3/v4 TTS Engine
     
     Few-shot and zero-shot voice cloning from RVC-Boss.
-    Supports Chinese, English, Japanese, Korean, Cantonese.
     
     Features:
-    - Few-shot: 1 minute training data
-    - Zero-shot: 5 second reference audio
-    - Cross-lingual synthesis
+    - Few-shot: 1 minute training data로 고품질 음성 클로닝
+    - Zero-shot: 5 second reference audio로 음성 클로닝
+    - Cross-lingual synthesis (다른 언어로 합성)
+    - v3: 24kHz, 고품질
+    - v4: 48kHz, 최고품질
     
     Supported languages: zh, en, ja, ko, yue (Cantonese)
+    
+    Note: reference_audio 파라미터 필수!
     """
     
     SUPPORTED_LANGUAGES = ["zh", "en", "ja", "ko", "yue"]
     
+    # 언어 코드 매핑 (GPT-SoVITS 내부 형식)
+    LANG_MAP = {
+        "zh": "zh",
+        "en": "en",
+        "ja": "ja",
+        "ko": "ko",
+        "yue": "yue",
+        "chinese": "zh",
+        "english": "en",
+        "japanese": "ja",
+        "korean": "ko",
+        "cantonese": "yue",
+    }
+    
     def __init__(
         self,
-        model_id: str = "kevinwang676/GPT-SoVITS-v3",
+        model_id: str = "lj1995/GPT-SoVITS",
+        version: str = "v3",
+        device: str = "auto",
         **kwargs
     ):
-        super().__init__(model_id, **kwargs)
+        """
+        Args:
+            model_id: HuggingFace 모델 ID 또는 로컬 경로
+            version: GPT-SoVITS 버전 (v1, v2, v3, v4)
+            device: cuda, cpu, auto
+        """
+        super().__init__(model_id, device=device, **kwargs)
         self._supported_languages = self.SUPPORTED_LANGUAGES
-        self._sample_rate = 32000  # GPT-SoVITS uses 32kHz
-        self.tts_pipeline = None
+        self._version = version
         
+        # 버전별 샘플레이트
+        self._sample_rate = 48000 if version == "v4" else 32000
+        
+        self.tts_pipeline = None
+        self.tts_config = None
+        self._gpt_sovits_path = None
+        
+    def _setup_gpt_sovits_path(self) -> str:
+        """GPT-SoVITS 경로를 설정합니다."""
+        # 1. 환경변수 확인
+        gpt_sovits_path = os.environ.get("GPT_SOVITS_PATH")
+        
+        if gpt_sovits_path and os.path.exists(gpt_sovits_path):
+            return gpt_sovits_path
+        
+        # 2. third_party 폴더 확인
+        possible_paths = [
+            Path(__file__).parent.parent.parent / "third_party" / "GPT-SoVITS",
+            Path.home() / "GPT-SoVITS",
+            Path("/opt/GPT-SoVITS"),
+            Path("GPT-SoVITS"),
+        ]
+        
+        for path in possible_paths:
+            if path.exists():
+                return str(path)
+        
+        raise FileNotFoundError(
+            "GPT-SoVITS not found. Please:\n"
+            "1. Clone: git clone https://github.com/RVC-Boss/GPT-SoVITS.git\n"
+            "2. Set GPT_SOVITS_PATH environment variable\n"
+            "   OR place it in third_party/GPT-SoVITS"
+        )
+    
     def load_model(self) -> None:
         """모델을 로드합니다."""
         if self.is_loaded:
@@ -44,54 +117,91 @@ class GPTSoVITSEngine(BaseTTSEngine):
             return
         
         logger.info(f"Loading GPT-SoVITS model: {self.model_id}")
-        logger.info("This requires GPT-SoVITS package to be installed")
+        logger.info(f"Version: {self._version}")
         
         try:
-            # GPT-SoVITS 임포트
-            from GPT_SoVITS.TTS_infer_pack.TTS import TTS, TTS_Config
+            # GPT-SoVITS 경로 설정
+            self._gpt_sovits_path = self._setup_gpt_sovits_path()
+            logger.info(f"GPT-SoVITS path: {self._gpt_sovits_path}")
             
-            # HuggingFace에서 모델 다운로드
-            from huggingface_hub import snapshot_download
+            # sys.path에 추가
+            if self._gpt_sovits_path not in sys.path:
+                sys.path.insert(0, self._gpt_sovits_path)
             
-            logger.info(f"Downloading model from HuggingFace: {self.model_id}")
-            model_dir = snapshot_download(
-                repo_id=self.model_id,
-                cache_dir=self.cache_dir
-            )
+            gpt_sovits_module = os.path.join(self._gpt_sovits_path, "GPT_SoVITS")
+            if gpt_sovits_module not in sys.path:
+                sys.path.insert(0, gpt_sovits_module)
             
-            logger.info(f"Model downloaded to: {model_dir}")
+            # 현재 디렉토리 변경 (GPT-SoVITS가 상대 경로 사용)
+            original_cwd = os.getcwd()
+            os.chdir(self._gpt_sovits_path)
             
-            # TTS 설정
-            # GPT-SoVITS는 SoVITS와 GPT 모델 경로를 각각 지정
-            sovits_path = os.path.join(model_dir, "SoVITS_weights", "model.pth")
-            gpt_path = os.path.join(model_dir, "GPT_weights", "model.ckpt")
-            
-            # TTS Config 생성
-            tts_config = TTS_Config()
-            tts_config.t2s_weights_path = gpt_path
-            tts_config.vits_weights_path = sovits_path
-            tts_config.device = self.device
-            tts_config.is_half = self.device == "cuda"  # FP16 for GPU
-            
-            # TTS 초기화
-            self.tts_pipeline = TTS(tts_config)
-            self.is_loaded = True
-            
-            logger.info(f"Successfully loaded GPT-SoVITS model: {self.model_id}")
-            logger.info("GPT-SoVITS supports few-shot and zero-shot voice cloning")
-            
+            try:
+                # GPT-SoVITS 임포트
+                from TTS_infer_pack.TTS import TTS, TTS_Config
+                
+                # 설정 파일 경로
+                config_path = os.path.join(
+                    self._gpt_sovits_path, 
+                    "GPT_SoVITS", "configs", "tts_infer.yaml"
+                )
+                
+                # TTS_Config 초기화
+                self.tts_config = TTS_Config(config_path)
+                
+                # 디바이스 설정
+                if self.device == "auto":
+                    self.device = "cuda" if torch.cuda.is_available() else "cpu"
+                
+                # 버전별 설정
+                self.tts_config.device = self.device
+                self.tts_config.is_half = self.device == "cuda"
+                
+                # 버전별 모델 경로 설정
+                pretrained_dir = os.path.join(
+                    self._gpt_sovits_path, "GPT_SoVITS", "pretrained_models"
+                )
+                
+                if self._version == "v3":
+                    self.tts_config.t2s_weights_path = os.path.join(pretrained_dir, "s1v3.ckpt")
+                    self.tts_config.vits_weights_path = os.path.join(pretrained_dir, "s2Gv3.pth")
+                elif self._version == "v4":
+                    self.tts_config.t2s_weights_path = os.path.join(pretrained_dir, "s1v3.ckpt")
+                    self.tts_config.vits_weights_path = os.path.join(
+                        pretrained_dir, "gsv-v4-pretrained", "s2Gv4.pth"
+                    )
+                elif self._version == "v2":
+                    v2_dir = os.path.join(pretrained_dir, "gsv-v2final-pretrained")
+                    self.tts_config.t2s_weights_path = os.path.join(
+                        v2_dir, "s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt"
+                    )
+                    self.tts_config.vits_weights_path = os.path.join(v2_dir, "s2G2333k.pth")
+                
+                # TTS 파이프라인 초기화
+                logger.info("Initializing TTS pipeline...")
+                self.tts_pipeline = TTS(self.tts_config)
+                
+                self.is_loaded = True
+                logger.info(f"Successfully loaded GPT-SoVITS {self._version}")
+                logger.info(f"Device: {self.device}")
+                logger.info(f"Sample rate: {self._sample_rate} Hz")
+                
+            finally:
+                # 원래 디렉토리로 복귀
+                os.chdir(original_cwd)
+                
         except ImportError as e:
-            logger.error(
-                "GPT-SoVITS package not installed. "
-                "Install from: https://github.com/RVC-Boss/GPT-SoVITS"
-            )
+            logger.error(f"GPT-SoVITS import failed: {e}")
             raise ImportError(
-                "GPT-SoVITS package required. "
-                "Clone and install from: git clone https://github.com/RVC-Boss/GPT-SoVITS.git"
+                "GPT-SoVITS 패키지를 찾을 수 없습니다.\n"
+                "1. git clone https://github.com/RVC-Boss/GPT-SoVITS.git\n"
+                "2. cd GPT-SoVITS && pip install -r requirements.txt\n"
+                "3. export GPT_SOVITS_PATH=/path/to/GPT-SoVITS"
             ) from e
         except Exception as e:
-            logger.error(f"Failed to load GPT-SoVITS model: {e}")
-            logger.error(f"Model directory: {model_dir if 'model_dir' in locals() else 'N/A'}")
+            logger.error(f"Failed to load GPT-SoVITS: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             raise
     
     def unload_model(self) -> None:
@@ -99,150 +209,181 @@ class GPTSoVITSEngine(BaseTTSEngine):
         if self.tts_pipeline is not None:
             del self.tts_pipeline
             self.tts_pipeline = None
-            self.is_loaded = False
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            logger.info(f"Unloaded model: {self.model_id}")
+        
+        if self.tts_config is not None:
+            del self.tts_config
+            self.tts_config = None
+        
+        self.is_loaded = False
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        logger.info(f"Unloaded model: {self.model_id}")
     
     def synthesize(self, request: TTSRequest) -> TTSOutput:
-        """음성을 합성합니다."""
+        """음성을 합성합니다.
+        
+        GPT-SoVITS는 참조 오디오가 필수입니다!
+        
+        Args:
+            request: TTSRequest (reference_audio 필수)
+            
+        Returns:
+            TTSOutput: 합성된 오디오
+            
+        Raises:
+            ValueError: reference_audio가 없는 경우
+        """
         if not self.is_loaded:
             self.load_model()
         
-        # 언어 확인
-        if request.language not in self._supported_languages:
-            logger.warning(
-                f"Language '{request.language}' may not be supported. "
-                f"Supported: {self._supported_languages}"
-            )
-        
         # 참조 오디오 필수 확인
-        if request.reference_audio is None:
+        if not request.reference_audio:
             raise ValueError(
-                "GPT-SoVITS requires reference audio for voice cloning. "
-                "Please provide reference_audio parameter."
+                "GPT-SoVITS requires reference_audio for voice cloning.\n"
+                "Please provide reference_audio parameter with a path to audio file."
             )
         
-        if request.reference_text is None:
-            raise ValueError(
-                "GPT-SoVITS requires reference text (what is said in reference audio). "
-                "Please provide reference_text parameter."
-            )
+        # 언어 매핑
+        text_lang = self._map_language(request.language or "zh")
+        prompt_lang = text_lang  # 기본적으로 같은 언어 사용
+        
+        logger.info(f"Synthesizing with GPT-SoVITS {self._version}")
+        logger.info(f"Text: {request.text[:50]}...")
+        logger.info(f"Language: {text_lang}")
+        logger.info(f"Reference audio: {request.reference_audio}")
         
         try:
-            # 참조 오디오 로드
-            ref_audio_path = self._prepare_reference_audio(request.reference_audio)
+            # 원래 디렉토리 저장
+            original_cwd = os.getcwd()
+            os.chdir(self._gpt_sovits_path)
             
-            logger.info(f"Using reference audio: {ref_audio_path}")
-            logger.info(f"Reference text: {request.reference_text}")
-            logger.info(f"Synthesizing: {request.text[:50]}...")
-            
-            # GPT-SoVITS inference
-            # get_tts_wav 함수 호출
-            synthesis_result = self.tts_pipeline.get_tts_wav(
-                ref_wav_path=ref_audio_path,
-                prompt_text=request.reference_text,
-                prompt_language=self._map_language_code(request.language),
-                text=request.text,
-                text_language=self._map_language_code(request.language),
-                how_to_cut="凑四句一切",  # 문장 분할 방식
-                top_k=20,
-                top_p=0.6,
-                temperature=0.6,
-                ref_free=False  # reference-free 모드 비활성화
-            )
-            
-            # 결과 처리
-            # synthesis_result는 (sample_rate, audio_data) 튜플
-            if isinstance(synthesis_result, tuple):
-                sr, audio_data = synthesis_result
-            else:
-                audio_data = synthesis_result
-                sr = self._sample_rate
-            
-            # numpy 배열로 변환
-            if isinstance(audio_data, torch.Tensor):
-                audio_data = audio_data.cpu().numpy()
-            elif not isinstance(audio_data, np.ndarray):
-                audio_data = np.array(audio_data)
-            
-            # 1D 배열로 변환
-            if audio_data.ndim > 1:
-                audio_data = audio_data.flatten()
-            
-            # float32 변환 및 정규화
-            if audio_data.dtype != np.float32:
-                audio_data = audio_data.astype(np.float32)
-            
-            if audio_data.max() > 1.0 or audio_data.min() < -1.0:
-                audio_data = audio_data / max(abs(audio_data.max()), abs(audio_data.min()))
-            
-            duration = len(audio_data) / sr
-            logger.info(f"Synthesis complete: {duration:.2f}s audio generated")
-            
-            return TTSOutput(
-                audio=audio_data,
-                sample_rate=sr,
-                metadata={
-                    "model": self.model_id,
-                    "language": request.language,
-                    "reference_audio": str(ref_audio_path),
-                    "reference_text": request.reference_text,
-                    "duration": duration,
-                    "engine": "gpt-sovits"
+            try:
+                # 참조 오디오 경로 준비
+                ref_audio_path = self._prepare_reference_audio(request.reference_audio)
+                
+                # 추론 요청 생성
+                inference_req = {
+                    "text": request.text,
+                    "text_lang": text_lang,
+                    "ref_audio_path": ref_audio_path,
+                    "prompt_text": request.reference_text or "",
+                    "prompt_lang": prompt_lang,
+                    "top_k": 15,
+                    "top_p": 1.0,
+                    "temperature": 1.0,
+                    "text_split_method": "cut5",
+                    "batch_size": 1,
+                    "speed_factor": request.speed if request.speed else 1.0,
+                    "fragment_interval": 0.3,
+                    "seed": -1,
+                    "parallel_infer": True,
+                    "repetition_penalty": 1.35,
+                    "sample_steps": 32,  # v3 기본값
+                    "streaming_mode": False,
                 }
-            )
-            
+                
+                # extra_params에서 추가 파라미터 가져오기
+                if request.extra_params:
+                    for key in ["top_k", "top_p", "temperature", "sample_steps", "seed"]:
+                        if key in request.extra_params:
+                            inference_req[key] = request.extra_params[key]
+                
+                # TTS 추론 실행
+                tts_generator = self.tts_pipeline.run(inference_req)
+                
+                # 결과 수집
+                audio_chunks = []
+                sample_rate = self._sample_rate
+                
+                for sr, chunk in tts_generator:
+                    sample_rate = sr
+                    audio_chunks.append(chunk)
+                
+                # 청크 합치기
+                if audio_chunks:
+                    audio_data = np.concatenate(audio_chunks)
+                else:
+                    raise RuntimeError("No audio generated")
+                
+                # float32 변환 및 정규화
+                if audio_data.dtype == np.int16:
+                    audio_data = audio_data.astype(np.float32) / 32768.0
+                elif audio_data.dtype != np.float32:
+                    audio_data = audio_data.astype(np.float32)
+                
+                # 정규화
+                max_val = np.abs(audio_data).max()
+                if max_val > 1.0:
+                    audio_data = audio_data / max_val
+                
+                duration = len(audio_data) / sample_rate
+                logger.info(f"Synthesis complete: {duration:.2f}s audio generated")
+                
+                return TTSOutput(
+                    audio=audio_data,
+                    sample_rate=sample_rate,
+                    metadata={
+                        "model": self.model_id,
+                        "version": self._version,
+                        "language": text_lang,
+                        "reference_audio": str(ref_audio_path),
+                        "duration": duration,
+                        "engine": "gpt-sovits"
+                    }
+                )
+                
+            finally:
+                os.chdir(original_cwd)
+                
         except Exception as e:
             logger.error(f"GPT-SoVITS synthesis failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             raise RuntimeError(f"GPT-SoVITS synthesis failed: {e}") from e
     
-    def _prepare_reference_audio(
-        self,
-        reference: Union[str, Path, np.ndarray]
-    ) -> str:
+    def _prepare_reference_audio(self, reference: Union[str, Path, bytes]) -> str:
         """참조 오디오를 준비합니다."""
-        import tempfile
         import soundfile as sf
+        import base64
         
         if isinstance(reference, (str, Path)):
-            # 이미 파일 경로면 그대로 반환
-            return str(reference)
-        
-        elif isinstance(reference, np.ndarray):
-            # numpy 배열이면 임시 파일로 저장
-            temp_file = tempfile.NamedTemporaryFile(
-                delete=False,
-                suffix=".wav",
-                dir=tempfile.gettempdir()
-            )
+            path = Path(reference)
+            if path.exists():
+                return str(path.absolute())
             
-            # WAV 파일로 저장
-            sf.write(temp_file.name, reference, self._sample_rate)
-            logger.debug(f"Saved reference audio to: {temp_file.name}")
+            # base64 인코딩된 데이터인지 확인
+            if reference.startswith("data:audio"):
+                # data:audio/wav;base64,xxxxx 형식
+                header, data = reference.split(",", 1)
+                audio_bytes = base64.b64decode(data)
+                
+                temp_file = tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".wav"
+                )
+                temp_file.write(audio_bytes)
+                temp_file.close()
+                return temp_file.name
+            
+            raise FileNotFoundError(f"Reference audio not found: {reference}")
+        
+        elif isinstance(reference, bytes):
+            # bytes 데이터
+            temp_file = tempfile.NamedTemporaryFile(
+                delete=False, suffix=".wav"
+            )
+            temp_file.write(reference)
+            temp_file.close()
             return temp_file.name
         
         else:
             raise ValueError(f"Unsupported reference audio type: {type(reference)}")
     
-    def _map_language_code(self, lang: str) -> str:
-        """언어 코드를 GPT-SoVITS 형식으로 매핑"""
-        # GPT-SoVITS는 "中文", "英文", "日文", "粤语", "韩文" 형식 사용
-        mapping = {
-            "zh": "中文",
-            "en": "英文",
-            "ja": "日文",
-            "ko": "韩文",
-            "yue": "粤语",
-            "chinese": "中文",
-            "english": "英文",
-            "japanese": "日文",
-            "korean": "韩文",
-            "cantonese": "粤语",
-        }
-        
+    def _map_language(self, lang: str) -> str:
+        """언어 코드를 매핑합니다."""
         lang_lower = lang.lower()
-        return mapping.get(lang_lower, "中文")
+        return self.LANG_MAP.get(lang_lower, "zh")
     
     @property
     def supported_languages(self) -> List[str]:
@@ -251,8 +392,7 @@ class GPTSoVITSEngine(BaseTTSEngine):
     
     @property
     def supported_voices(self) -> List[str]:
-        """지원하는 음성"""
-        # GPT-SoVITS는 reference audio로 음성을 결정
+        """지원하는 음성 (GPT-SoVITS는 reference audio 기반)"""
         return ["reference"]
     
     @property
@@ -263,9 +403,9 @@ class GPTSoVITSEngine(BaseTTSEngine):
     @property
     def supports_streaming(self) -> bool:
         """스트리밍 지원 여부"""
-        return False  # GPT-SoVITS는 배치 모드
+        return True  # GPT-SoVITS v2+ 스트리밍 지원
     
     @property
     def supports_zero_shot(self) -> bool:
         """Zero-shot 지원 여부"""
-        return True  # GPT-SoVITS는 zero-shot 지원 (5초 참조 오디오)
+        return True  # GPT-SoVITS는 zero-shot 지원

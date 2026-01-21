@@ -25,7 +25,8 @@ vTTS의 각 TTS 엔진을 Docker로 격리하여 의존성 충돌 없이 실행�
 docker-compose up -d supertonic
 # → http://localhost:8001
 
-# GPT-SoVITS (음성 클로닝)
+# GPT-SoVITS (음성 클로닝) - reference audio 필수!
+mkdir -p reference_audio  # 참조 오디오 디렉토리 생성
 docker-compose up -d gptsovits
 # → http://localhost:8002
 
@@ -108,24 +109,45 @@ audio.save("output.wav")
 ### cURL
 
 ```bash
-# Supertonic
+# Supertonic (참조 오디오 불필요)
 curl -X POST http://localhost:8001/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{"input": "Hello!", "voice": "F1"}' \
   --output hello.mp3
 
-# Gateway (기본: Supertonic)
-curl -X POST http://localhost:8000/v1/audio/speech \
+# GPT-SoVITS (참조 오디오 필수!)
+curl -X POST http://localhost:8002/v1/audio/speech \
   -H "Content-Type: application/json" \
-  -d '{"input": "Hello!", "voice": "F1"}' \
-  --output hello.mp3
-
-# Gateway - GPT-SoVITS 직접 접근
-curl -X POST http://localhost:8000/gptsovits/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{"input": "Hello!", "voice": "default"}' \
-  --output hello.mp3
+  -d '{
+    "input": "안녕하세요, 음성 클로닝 테스트입니다.",
+    "voice": "reference",
+    "language": "ko",
+    "reference_audio": "/app/reference_audio/sample.wav",
+    "reference_text": "이것은 참조 오디오의 텍스트입니다."
+  }' \
+  --output cloned.wav
 ```
+
+### GPT-SoVITS 사용법 (Python)
+
+```python
+from vtts.client import VTTSClient
+
+# GPT-SoVITS 클라이언트
+gptsovits = VTTSClient("http://localhost:8002")
+
+# 음성 클로닝 TTS (reference_audio 필수!)
+audio = gptsovits.tts(
+    text="안녕하세요, 음성 클로닝 테스트입니다.",
+    model="lj1995/GPT-SoVITS",
+    language="ko",
+    reference_audio="/app/reference_audio/sample.wav",
+    reference_text="참조 오디오에서 말하는 내용"
+)
+audio.save("cloned.wav")
+```
+
+> ⚠️ **중요**: GPT-SoVITS는 `reference_audio`와 `reference_text`가 필수입니다!
 
 ---
 
@@ -227,14 +249,17 @@ docker-compose down -v
 
 ## 🆚 엔진 비교
 
-| 특성 | Supertonic | GPT-SoVITS | CosyVoice |
-|------|------------|------------|-----------|
+| 특성 | Supertonic | GPT-SoVITS v3 | CosyVoice |
+|------|------------|---------------|-----------|
 | 속도 | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
 | 품질 | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| 다국어 | ✅ 5개 언어 | ⚠️ 제한적 | ✅ 다국어 |
-| 음성 클로닝 | ❌ | ✅ | ⚠️ 제한적 |
+| 다국어 | ✅ 5개 언어 | ✅ 5개 언어 | ✅ 다국어 |
+| 음성 클로닝 | ❌ | ✅ Zero-shot | ⚠️ 제한적 |
 | 메모리 | 가벼움 | 무거움 | 중간 |
+| 참조 오디오 | 불필요 | **필수** | 선택적 |
 | 설치 난이도 | 쉬움 | 어려움 | 중간 |
+
+> **GPT-SoVITS 참조 오디오**: GPT-SoVITS는 zero-shot 음성 클로닝 모델이므로 합성할 음성의 참조 오디오가 반드시 필요합니다.
 
 ---
 
