@@ -23,7 +23,7 @@
 
 ### TTS (Text-to-Speech)
 - ✅ **GPT-SoVITS-v3** - Few-shot 음성 복제
-- ✅ **Supertonic-2** - 초고속 온디바이스 TTS (5개 언어)
+- ✅ **Supertonic-2** - 초고속 온디바이스 TTS (5개 언어: en, ko, es, pt, fr)
 - ✅ **CosyVoice3** - Zero-shot 다국어 TTS (9개 언어, 18+ 중국 방언)
 - 🔜 **StyleTTS2**, **XTTS-v2**, **Bark**
 
@@ -67,6 +67,8 @@ pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
 
 #### Kaggle에서 테스트
 [Kaggle 노트북](kaggle_test_notebook.ipynb) 참고
+
+⚠️ **설치 문제가 있나요?** [문제 해결 가이드](TROUBLESHOOTING.md)를 확인하세요.
 
 ### 서버 실행
 
@@ -168,6 +170,13 @@ vTTS/
 - [ ] 스트리밍 지원
 - [ ] 배치 추론 최적화
 - [ ] Docker 이미지
+
+## 📚 문서
+
+- [빠른 시작 가이드](QUICKSTART.md)
+- [문제 해결 가이드](TROUBLESHOOTING.md) - 500 에러, 설치 문제 등
+- [Kaggle 테스트 노트북](kaggle_test_notebook.ipynb)
+- [예제 코드](examples/)
 
 ## 📝 라이선스
 
