@@ -62,12 +62,14 @@ STT_DEPS = [
 # ============================================================
 
 # Supertonic: ONNX 기반, 가벼움
+# 기본: GPU 지원 (CPU에서도 동작, GPU 있으면 자동 사용)
 SUPERTONIC_DEPS = [
-    "onnxruntime>=1.16.0,<2.0.0",
+    "onnxruntime-gpu>=1.16.0,<2.0.0",
 ]
 
-SUPERTONIC_CUDA_DEPS = [
-    "onnxruntime-gpu>=1.16.0,<2.0.0",
+# CPU 전용 (GPU 드라이버 없는 환경)
+SUPERTONIC_CPU_DEPS = [
+    "onnxruntime>=1.16.0,<2.0.0",
 ]
 
 # CosyVoice: ModelScope 기반
@@ -162,8 +164,8 @@ setup(
         # ============================================================
         # 개별 엔진 (권장: 하나씩만 설치)
         # ============================================================
-        "supertonic": SUPERTONIC_DEPS,
-        "supertonic-cuda": SUPERTONIC_CUDA_DEPS,
+        "supertonic": SUPERTONIC_DEPS,  # 기본 GPU 지원
+        "supertonic-cpu": SUPERTONIC_CPU_DEPS,  # CPU 전용
         "cosyvoice": COSYVOICE_DEPS,
         "gptsovits": GPTSOVITS_DEPS,
         
@@ -172,13 +174,13 @@ setup(
         # ============================================================
         
         # Supertonic + CosyVoice (비교적 안전)
-        "supertonic-cosyvoice": SUPERTONIC_CUDA_DEPS + COSYVOICE_DEPS,
+        "supertonic-cosyvoice": SUPERTONIC_DEPS + COSYVOICE_DEPS,
         
         # 전체 설치 (충돌 가능 - Docker 강력 권장!)
-        "all": SUPERTONIC_CUDA_DEPS + COSYVOICE_DEPS + GPTSOVITS_DEPS,
+        "all": SUPERTONIC_DEPS + COSYVOICE_DEPS + GPTSOVITS_DEPS,
         
-        # CUDA 지원
-        "cuda": SUPERTONIC_CUDA_DEPS,
+        # CUDA 지원 (하위 호환성)
+        "cuda": SUPERTONIC_DEPS,
     },
     
     entry_points={

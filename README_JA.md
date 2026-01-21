@@ -42,11 +42,11 @@
 ### 方法1: Supertonicのみ使用 (最もシンプル)
 
 ```bash
-# CUDA対応 (推奨)
-pip install "vtts[supertonic-cuda] @ git+https://github.com/bellkjtt/vTTS.git"
-
-# CPUのみ
+# デフォルトインストール (GPU自動対応)
 pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# CPUのみ (GPU無し環境)
+pip install "vtts[supertonic-cpu] @ git+https://github.com/bellkjtt/vTTS.git"
 
 # サーバー起動
 vtts serve Supertone/supertonic-2 --device cuda
