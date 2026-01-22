@@ -50,13 +50,22 @@
 > 2. **Supertonic + GPT-SoVITS**: 호환 보장 (추천!)
 > 3. **여러 엔진 동시 사용**: Docker 필수!
 
-### 로컬 설치 (간편 모드)
+### 로컬 설치 (uv 권장 - 빠르고 정확함!)
+
+> **uv 사용을 강력히 권장합니다!**  
+> `uv`는 Rust 기반의 초고속 Python 패키지 관리자로, `pip`보다 10-100배 빠르고 의존성 해결이 정확합니다.
+
+```bash
+# uv 설치 (한 번만)
+pip install uv
+# 또는: curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
 #### 옵션 1: Supertonic만 (가장 가볍고 빠름)
 
 ```bash
-# GPU 자동 지원
-pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+# GPU 자동 지원 (uv 사용!)
+uv pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git" --system
 
 # 서버 실행
 vtts serve Supertone/supertonic-2 --device cuda
@@ -65,8 +74,8 @@ vtts serve Supertone/supertonic-2 --device cuda
 #### 옵션 2: Supertonic + GPT-SoVITS (호환 보장!)
 
 ```bash
-# 1. 통합 설치 (의존성 호환 검증됨)
-pip install "vtts[supertonic-gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
+# 1. 통합 설치 (uv 사용!)
+uv pip install "vtts[supertonic-gptsovits] @ git+https://github.com/bellkjtt/vTTS.git" --system
 
 # 2. GPT-SoVITS 저장소 자동 클론
 vtts setup --engine gptsovits
@@ -78,11 +87,11 @@ vtts serve kevinwang676/GPT-SoVITS-v3 --port 8002 --device cuda
 
 > **Supertonic + GPT-SoVITS는 같이 설치해도 충돌하지 않습니다!**
 
-#### 옵션 3: CosyVoice만 (별도 환경 권장)
+#### 옵션 3: CosyVoice만 (uv 필수!)
 
 ```bash
-# 1. 기본 설치
-pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
+# 1. CosyVoice 설치 (uv 사용 - pip로는 의존성 충돌!)
+uv pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git" --system
 
 # 2. CosyVoice 저장소 자동 클론
 vtts setup --engine cosyvoice
@@ -91,7 +100,19 @@ vtts setup --engine cosyvoice
 vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda
 ```
 
-> **CosyVoice는 의존성 충돌 가능성이 있습니다. 별도 가상환경 또는 Docker 사용 권장!**
+> **CosyVoice는 의존성이 복잡합니다. `uv` 사용 또는 Docker 권장!**
+
+<details>
+<summary><b>기존 pip 사용 (권장하지 않음)</b></summary>
+
+```bash
+# pip로도 가능하지만 의존성 충돌 가능성이 높습니다
+pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# CosyVoice는 pip로 설치 시 높은 확률로 실패합니다!
+```
+
+</details>
 
 ### Docker (여러 엔진 동시 사용)
 
