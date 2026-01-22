@@ -130,6 +130,9 @@ COSYVOICE_DEPS = [
     "torch==2.3.1",  # 정확히 고정
     "torchaudio==2.3.1",  # 정확히 고정
     
+    # Whisper (CosyVoice frontend 필수!)
+    "openai-whisper>=20231117",
+    
     # Transformers (중요: 4.51.3 필요!)
     "transformers==4.51.3",  # GPT-SoVITS와 충돌!
     
