@@ -126,9 +126,18 @@ class GPTSoVITSEngine(BaseTTSEngine):
         logger.info(f"Version: {self._version}")
         
         try:
+            # HuggingFace에서 모델 다운로드
+            logger.info(f"Downloading model from HuggingFace: {self.model_id}")
+            model_path = snapshot_download(
+                repo_id=self.model_id,
+                cache_dir=None,  # 기본 HF 캐시 사용
+                resume_download=True
+            )
+            logger.info(f"Model downloaded to: {model_path}")
+            
             # GPT-SoVITS 경로 설정
             self._gpt_sovits_path = self._setup_gpt_sovits_path()
-            logger.info(f"GPT-SoVITS path: {self._gpt_sovits_path}")
+            logger.info(f"GPT-SoVITS repo path: {self._gpt_sovits_path}")
             
             # sys.path에 추가
             if self._gpt_sovits_path not in sys.path:
@@ -163,25 +172,27 @@ class GPTSoVITSEngine(BaseTTSEngine):
                 self.tts_config.device = self.device
                 self.tts_config.is_half = self.device == "cuda"
                 
-                # 버전별 모델 경로 설정
-                pretrained_dir = os.path.join(
-                    self._gpt_sovits_path, "GPT_SoVITS", "pretrained_models"
-                )
-                
+                # 버전별 모델 경로 설정 (HuggingFace 다운로드 경로 사용)
+                # HuggingFace 모델은 model_path에 직접 .ckpt, .pth 파일이 있음
                 if self._version == "v3":
-                    self.tts_config.t2s_weights_path = os.path.join(pretrained_dir, "s1v3.ckpt")
-                    self.tts_config.vits_weights_path = os.path.join(pretrained_dir, "s2Gv3.pth")
+                    # kevinwang676/GPT-SoVITS-v3 구조 확인 필요
+                    # 기본적으로 루트에 모델 파일이 있을 것으로 예상
+                    self.tts_config.t2s_weights_path = os.path.join(model_path, "s1v3.ckpt")
+                    self.tts_config.vits_weights_path = os.path.join(model_path, "s2Gv3.pth")
+                    
+                    # BERT 및 CNHubert 경로 설정
+                    self.tts_config.bert_base_path = os.path.join(
+                        self._gpt_sovits_path, "GPT_SoVITS", "pretrained_models", "chinese-roberta-wwm-ext-large"
+                    )
+                    self.tts_config.cnhuhbert_base_path = os.path.join(
+                        self._gpt_sovits_path, "GPT_SoVITS", "pretrained_models", "chinese-hubert-base"
+                    )
                 elif self._version == "v4":
-                    self.tts_config.t2s_weights_path = os.path.join(pretrained_dir, "s1v3.ckpt")
-                    self.tts_config.vits_weights_path = os.path.join(
-                        pretrained_dir, "gsv-v4-pretrained", "s2Gv4.pth"
-                    )
+                    self.tts_config.t2s_weights_path = os.path.join(model_path, "s1v3.ckpt")
+                    self.tts_config.vits_weights_path = os.path.join(model_path, "s2Gv4.pth")
                 elif self._version == "v2":
-                    v2_dir = os.path.join(pretrained_dir, "gsv-v2final-pretrained")
-                    self.tts_config.t2s_weights_path = os.path.join(
-                        v2_dir, "s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt"
-                    )
-                    self.tts_config.vits_weights_path = os.path.join(v2_dir, "s2G2333k.pth")
+                    self.tts_config.t2s_weights_path = os.path.join(model_path, "s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt")
+                    self.tts_config.vits_weights_path = os.path.join(model_path, "s2G2333k.pth")
                 
                 # TTS 파이프라인 초기화
                 logger.info("Initializing TTS pipeline...")
