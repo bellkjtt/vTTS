@@ -196,7 +196,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Multimedia :: Sound/Audio :: Speech",
     ],
-    python_requires=">=3.10,<3.13",  # Python 3.13 아직 미지원
+    python_requires=">=3.10,<3.15",  # Python 3.10-3.14 지원
     
     install_requires=CORE_DEPS + STT_DEPS,
     

@@ -190,6 +190,21 @@ vtts serve Supertone/supertonic-2
 vtts serve Supertone/supertonic-2 --device cuda --port 8000
 ```
 
+### CosyVoice (다국어 음성 클로닝)
+
+```bash
+# CosyVoice 저장소 설치 (자동 클론 + 의존성 설치)
+vtts setup --engine cosyvoice
+
+# 서버 실행 (모델 자동 다운로드됨!)
+vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda --port 8001
+```
+
+**참고:**
+- 첫 실행 시 HuggingFace에서 **자동으로 모델을 다운로드**합니다 (~2 GB)
+- **9개 언어** 지원: 한국어, 영어, 중국어, 일본어, 광동어, 스페인어, 프랑스어, 독일어, 포르투갈어
+- **18+ 중국어 방언** 지원
+
 ### GPT-SoVITS (음성 클로닝)
 
 ```bash
@@ -254,6 +269,25 @@ audio = client.tts(
     silence_duration=0.3  # 청크 간 무음 (초)
 )
 ```
+
+### 음성 클로닝 (CosyVoice)
+```python
+from vtts import VTTSClient
+
+# CosyVoice 클라이언트 (9개 언어 지원!)
+client = VTTSClient("http://localhost:8001")
+
+audio = client.tts(
+    text="안녕하세요, CosyVoice로 생성한 음성입니다.",
+    model="FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
+    voice="reference",
+    language="ko",  # ko, en, zh, ja, yue, es, fr, de, pt
+    reference_audio="./samples/reference.wav",  # 참조 오디오 (제로샷 클로닝)
+    reference_text="참조 오디오에서 말하는 내용"
+)
+audio.save("cosyvoice_output.wav")
+```
+> **NOTE**: CosyVoice는 9개 언어를 지원하며, 18+ 중국어 방언도 지원합니다!
 
 ### 음성 클로닝 (GPT-SoVITS)
 ```python

@@ -55,11 +55,15 @@ class CosyVoiceEngine(BaseTTSEngine):
         logger.info("This requires CosyVoice package to be installed")
         
         # CosyVoice 저장소 경로 확인 및 추가
+        # vTTS 프로젝트 루트 경로 찾기
+        vtts_root = Path(__file__).parent.parent.parent.resolve()
+        
         cosyvoice_paths = [
             os.environ.get("COSYVOICE_PATH"),  # 환경변수
-            os.path.expanduser("~/.vtts/CosyVoice"),  # 기본 경로
-            "./third_party/CosyVoice",  # 프로젝트 내부
-            "../CosyVoice",  # 상위 디렉토리
+            str(vtts_root / "third_party" / "CosyVoice"),  # 프로젝트 내부 (우선순위 1)
+            os.path.expanduser("~/.vtts/CosyVoice"),  # 사용자 홈
+            "./third_party/CosyVoice",  # 상대 경로 (fallback)
+            "../CosyVoice",  # 상위 디렉토리 (fallback)
         ]
         
         cosyvoice_found = False
