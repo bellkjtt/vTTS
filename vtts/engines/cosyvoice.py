@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import List, Optional, Union
 import os
+import sys
 
 import numpy as np
 import torch
@@ -52,6 +53,29 @@ class CosyVoiceEngine(BaseTTSEngine):
         
         logger.info(f"Loading CosyVoice model: {self.model_id}")
         logger.info("This requires CosyVoice package to be installed")
+        
+        # CosyVoice 저장소 경로 확인 및 추가
+        cosyvoice_paths = [
+            os.environ.get("COSYVOICE_PATH"),  # 환경변수
+            os.path.expanduser("~/.vtts/CosyVoice"),  # 기본 경로
+            "./third_party/CosyVoice",  # 프로젝트 내부
+            "../CosyVoice",  # 상위 디렉토리
+        ]
+        
+        cosyvoice_found = False
+        for path in cosyvoice_paths:
+            if path and os.path.exists(path):
+                if path not in sys.path:
+                    sys.path.insert(0, path)
+                    logger.info(f"Added CosyVoice path to sys.path: {path}")
+                cosyvoice_found = True
+                break
+        
+        if not cosyvoice_found:
+            logger.warning(
+                "CosyVoice repository not found. "
+                "Install with: vtts setup --engine cosyvoice"
+            )
         
         try:
             # CosyVoice 임포트

@@ -457,6 +457,15 @@ def setup(engine: str, cuda: bool):
             if result.returncode != 0:
                 console.print(f"[yellow]⚠️ Some requirements failed, but continuing...[/yellow]")
         
+        # CosyVoice 패키지 editable install (중요!)
+        console.print("  [dim]Installing CosyVoice package (editable)...[/dim]")
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-e", str(cosyvoice_path), "-q"],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            console.print(f"[yellow]⚠️ CosyVoice package install failed: {result.stderr}[/yellow]")
+        
         # 환경변수 설정 안내
         console.print(f"\n[green]✓[/green] CosyVoice installed: {cosyvoice_path}")
         
