@@ -8,45 +8,45 @@
 
 **vLLM for Speech** - Huggingface에서 바로 다운로드하여 추론 가능한 범용 TTS/STT 서빙 시스템
 
-한국어 | [English](README_EN.md) | [中文](README_ZH.md) | [日本語](README_JA.md)
+한국어 | [English](docs/i18n/README_EN.md) | [中文](docs/i18n/README_ZH.md) | [日本語](docs/i18n/README_JA.md)
 
-## 🎯 목표
+## 목표
 
-- 🚀 **간단한 사용법**: `vtts serve model-name` 한 줄로 서버 실행
-- 🤗 **Huggingface 통합**: 모델 자동 다운로드 및 캐싱
-- 🌐 **OpenAI 호환 API**: OpenAI TTS & Whisper API와 완전 호환
-- 🎙️ **TTS + STT 통합**: 텍스트 음성 변환과 음성 인식 동시 지원
-- 🇰🇷 **한국어 우선**: 한국어 지원 모델 중심
-- 🐳 **Docker 지원**: 의존성 충돌 없이 여러 엔진 동시 실행
-- 🎮 **CUDA 지원**: GPU 가속으로 빠른 추론
+- **간단한 사용법**: `vtts serve model-name` 한 줄로 서버 실행
+- **Huggingface 통합**: 모델 자동 다운로드 및 캐싱
+- **OpenAI 호환 API**: OpenAI TTS & Whisper API와 완전 호환
+- **TTS + STT 통합**: 텍스트 음성 변환과 음성 인식 동시 지원
+- **한국어 우선**: 한국어 지원 모델 중심
+- **Docker 지원**: 의존성 충돌 없이 여러 엔진 동시 실행
+- **CUDA 지원**: GPU 가속으로 빠른 추론
 
-## 📦 지원 모델
+## 지원 모델
 
 ### TTS (Text-to-Speech)
 | 엔진 | 속도 | 품질 | 다국어 | 음성 클로닝 | 참조 오디오 |
 |------|------|------|--------|------------|------------|
-| ✅ **Supertonic-2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | 5개 언어 | ❌ | 불필요 |
-| ✅ **GPT-SoVITS v3** | ⭐⭐ | ⭐⭐⭐⭐⭐ | 5개 언어 | ✅ Zero-shot | **필수** |
-| ✅ **CosyVoice3** | ⭐⭐⭐ | ⭐⭐⭐⭐ | 9개 언어 | ⚠️ | 선택적 |
-| 🔜 **StyleTTS2**, **XTTS-v2**, **Bark** | - | - | - | - | - |
+| **Supertonic-2** | Very Fast | Good | 5개 언어 | No | 불필요 |
+| **GPT-SoVITS v3** | Moderate | Excellent | 5개 언어 | Zero-shot | **필수** |
+| **CosyVoice3** | Fast | Very Good | 9개 언어 | Optional | 선택적 |
+| **StyleTTS2**, **XTTS-v2**, **Bark** (Coming Soon) | - | - | - | - | - |
 
 > **GPT-SoVITS**: Zero-shot 음성 클로닝 모델로, 합성할 목표 음성의 참조 오디오(3~10초)가 필수입니다.
 
 ### STT (Speech-to-Text)
-- ✅ **Faster-Whisper** - 초고속 Whisper (CTranslate2)
-- 🔜 **Whisper.cpp**, **Parakeet**
+- **Faster-Whisper** - 초고속 Whisper (CTranslate2)
+- **Whisper.cpp**, **Parakeet** (Coming Soon)
 
 ---
 
-## 🚀 빠른 시작
+## 빠른 시작
 
-> **⚠️ 의존성 충돌 안내**  
+> **NOTE - 의존성 충돌 안내**  
 > 엔진마다 의존성이 다릅니다. **로컬 설치는 한 번에 하나의 엔진만** 설치하는 것을 권장합니다.  
 > 여러 엔진을 동시에 사용하려면 **Docker 사용**을 강력히 권장합니다!
 
-### 📦 로컬 설치 (간편 모드)
+### 로컬 설치 (간편 모드)
 
-#### 옵션 1: Supertonic만 (가장 가볍고 빠름) ⭐
+#### 옵션 1: Supertonic만 (가장 가볍고 빠름)
 
 ```bash
 # GPU 자동 지원
@@ -56,7 +56,7 @@ pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
 vtts serve Supertone/supertonic-2 --device cuda
 ```
 
-#### 옵션 2: Supertonic + GPT-SoVITS (호환 보장!) ⭐
+#### 옵션 2: Supertonic + GPT-SoVITS (호환 보장!)
 
 ```bash
 # 1. 통합 설치 (의존성 호환 검증됨)
@@ -70,7 +70,7 @@ vtts serve Supertone/supertonic-2 --port 8001 --device cuda
 vtts serve kevinwang676/GPT-SoVITS-v3 --port 8002 --device cuda
 ```
 
-> 💡 **Supertonic + GPT-SoVITS는 같이 설치해도 충돌하지 않습니다!**
+> **Supertonic + GPT-SoVITS는 같이 설치해도 충돌하지 않습니다!**
 
 #### 옵션 3: CosyVoice만 (별도 환경 권장)
 
@@ -85,9 +85,9 @@ vtts setup --engine cosyvoice
 vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda
 ```
 
-> ⚠️ **CosyVoice는 의존성 충돌 가능성이 있습니다. 별도 가상환경 또는 Docker 사용 권장!**
+> **CosyVoice는 의존성 충돌 가능성이 있습니다. 별도 가상환경 또는 Docker 사용 권장!**
 
-### 🐳 Docker (여러 엔진 동시 사용)
+### Docker (여러 엔진 동시 사용)
 
 ```bash
 # 개별 실행
@@ -99,9 +99,9 @@ docker-compose up -d cosyvoice    # :8003
 docker-compose --profile gateway up -d  # :8000 (통합 엔드포인트)
 ```
 
-📖 자세한 내용: [Docker 가이드](DOCKER.md)
+자세한 내용: [Docker 가이드](DOCKER.md)
 
-### 🛠️ CLI 자동 설치
+### CLI 자동 설치
 
 ```bash
 # 기본 설치
@@ -115,7 +115,7 @@ vtts setup --engine cosyvoice            # CosyVoice (저장소 자동 클론)
 
 ---
 
-## 🔧 환경 설정
+## 환경 설정
 
 ### 환경 진단 및 자동 수정
 
@@ -132,7 +132,7 @@ vtts doctor --fix --cuda
 
 출력 예시:
 ```
-🩺 vTTS Environment Diagnosis
+vTTS Environment Diagnosis
 
 ✓ Python: 3.10.12
 ✓ numpy: 1.26.4
@@ -142,7 +142,7 @@ vtts doctor --fix --cuda
   GPU: NVIDIA GeForce RTX 4090
 ✓ vTTS: 설치됨
 
-✅ 모든 환경이 정상입니다!
+모든 환경이 정상입니다!
 ```
 
 ### Kaggle/Colab에서
@@ -155,7 +155,7 @@ vtts doctor --fix --cuda
 
 ---
 
-## 💻 서버 실행
+## 서버 실행
 
 ### Supertonic (빠른 TTS)
 ```bash
@@ -169,11 +169,11 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 # GPT-SoVITS 저장소 설치 (위의 "방법 2" 참고)
 vtts setup --engine gptsovits
 
-# 서버 실행 (pretrained 모델 자동 다운로드됨! 🎉)
+# 서버 실행 (pretrained 모델 자동 다운로드됨!)
 vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
 
-**💡 참고:**
+**참고:**
 - 첫 실행 시 [HuggingFace](https://huggingface.co/kevinwang676/GPT-SoVITS-v3/tree/main/GPT_SoVITS/pretrained_models)에서 **자동으로 pretrained 모델을 다운로드**합니다 (~2.9 GB)
 - 모델은 `~/.cache/huggingface/` 에 캐시되며, 이후 재사용됩니다
 
@@ -194,7 +194,7 @@ vtts serve Supertone/supertonic-2 --stt-model base --device cuda
 
 ---
 
-## 🐍 Python 사용
+## Python 사용
 
 ### 기본 사용법
 ```python
@@ -242,7 +242,7 @@ audio = client.tts(
     language="ko",
     reference_audio="./samples/reference.wav",  # 참조 오디오 (필수!)
     reference_text="참조 오디오에서 말하는 내용",  # 참조 텍스트 (필수!)
-    # 🎛️ 품질 조절 파라미터 (선택)
+    # 품질 조절 파라미터 (선택)
     speed=1.0,                  # 속도 (0.5-2.0)
     top_k=15,                   # Top-K 샘플링 (1-100)
     top_p=1.0,                  # Top-P 샘플링 (0.0-1.0)
@@ -257,7 +257,7 @@ audio = client.tts(
 )
 audio.save("cloned_voice.wav")
 ```
-> ⚠️ GPT-SoVITS는 `reference_audio`와 `reference_text` 파라미터가 필수입니다!
+> **NOTE**: GPT-SoVITS는 `reference_audio`와 `reference_text` 파라미터가 필수입니다!
 
 **파라미터 가이드:**
 | 파라미터 | 기본값 | 범위 | 설명 |
@@ -303,7 +303,7 @@ curl -X POST http://localhost:8000/v1/audio/speech \
 
 ---
 
-## 🐳 Docker
+## Docker
 
 ### 포트 구성
 | 엔진 | 포트 | GPU 메모리 |
@@ -329,11 +329,11 @@ docker-compose logs -f supertonic
 docker-compose down
 ```
 
-📖 자세한 내용: [Docker 가이드](DOCKER.md)
+자세한 내용: [Docker 가이드](DOCKER.md)
 
 ---
 
-## 📊 CLI 명령어
+## CLI 명령어
 
 | 명령어 | 설명 |
 |--------|------|
@@ -346,7 +346,7 @@ docker-compose down
 
 ---
 
-## 🏗️ 아키텍처
+## 아키텍처
 
 ```
 vTTS/
@@ -380,7 +380,7 @@ vTTS/
 
 ---
 
-## 🔧 개발 로드맵
+## 개발 로드맵
 
 - [x] 프로젝트 구조 설계
 - [x] 베이스 엔진 인터페이스 구현
@@ -399,31 +399,36 @@ vTTS/
 
 ---
 
-## 📚 문서
+## 문서
 
 ### 시작하기
-- [빠른 시작 가이드](QUICKSTART.md)
-- [설치 가이드](INSTALL.md)
-- [엔진 설정 가이드](ENGINES_SETUP.md)
+- [빠른 시작 가이드](docs/QUICKSTART.md)
+- [설치 가이드](docs/INSTALL.md)
+- [엔진 설정 가이드](docs/ENGINES_SETUP.md)
 - [문제 해결 가이드](TROUBLESHOOTING.md)
 - [Docker 가이드](DOCKER.md)
 
 ### 예제 및 테스트
-- [📝 예제 코드](examples/) - [예제 README 보기](examples/README.md)
-- [🧪 테스트 스위트](tests/) - [테스트 README 보기](tests/README.md)
+- [예제 코드](examples/) - [예제 README](examples/README.md)
+- [테스트 스위트](tests/) - [테스트 README](tests/README.md)
   - [Kaggle 노트북 (Supertonic)](tests/kaggle/kaggle_supertonic.ipynb)
   - [Kaggle 노트북 (GPT-SoVITS)](tests/kaggle/kaggle_gptsovits.ipynb)
   - [Kaggle 노트북 (CosyVoice)](tests/kaggle/kaggle_cosyvoice.ipynb)
 
 ### 개발자 문서
-- [📚 개발 문서](docs/) - [문서 README 보기](docs/README.md)
+- [개발 문서](docs/) - [문서 README](docs/README.md)
   - [프로젝트 구조](docs/PROJECT_STRUCTURE.md)
   - [프로젝트 현황](docs/PROJECT_STATUS.md)
   - [릴리스 체크리스트](docs/RELEASE_CHECKLIST.md)
 
+### 다국어 문서
+- [English](docs/i18n/README_EN.md)
+- [中文](docs/i18n/README_ZH.md)
+- [日本語](docs/i18n/README_JA.md)
+
 ---
 
-## ⚠️ 문제 해결
+## 문제 해결
 
 ### numpy 호환성 에러
 ```
@@ -443,22 +448,22 @@ WARNING: CUDA requested but CUDAExecutionProvider not available
 docker-compose up -d supertonic
 ```
 
-📖 더 많은 문제: [문제 해결 가이드](TROUBLESHOOTING.md)
+더 많은 문제: [문제 해결 가이드](TROUBLESHOOTING.md)
 
 ---
 
-## 📝 라이선스
+## 라이선스
 
 Apache License 2.0
 
-## 💖 후원
+## 후원
 
 이 프로젝트가 도움이 되셨나요? 
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-pink?style=for-the-badge)](https://github.com/sponsors/bellkjtt)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-orange?style=for-the-badge)](https://ko-fi.com/bellkjtt)
 
-## 🙏 감사의 말
+## 감사의 말
 
 - [vLLM](https://github.com/vllm-project/vllm) - 아키텍처 영감
 - [Supertone](https://huggingface.co/Supertone/supertonic-2)
