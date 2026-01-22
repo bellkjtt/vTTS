@@ -343,14 +343,17 @@ def setup(engine: str, cuda: bool):
     step = 1
     
     # numpy 먼저 설치 (호환성)
-    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] numpy 정확한 버전 설치...")
+    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] numpy 정확한 버전 강제 설치...")
     
     if use_uv:
-        # uv 사용 (정확한 버전)
+        # uv 사용 (정확한 버전 - 강제!)
+        console.print("  [dim]Uninstalling existing numpy...[/dim]")
         subprocess.run(["uv", "pip", "uninstall", "numpy", "-y"], 
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["uv", "pip", "install", "--system", "numpy==1.26.4"], 
-                      capture_output=True, check=True)
+        console.print("  [dim]Installing numpy==1.26.4 (forced)...[/dim]")
+        subprocess.run(["uv", "pip", "install", "--reinstall", "--system", "numpy==1.26.4"], 
+                      check=True)
+        console.print("[green]✓[/green] numpy==1.26.4 강제 설치 완료")
     else:
         # pip 사용
         subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y", "-q"],
@@ -360,27 +363,24 @@ def setup(engine: str, cuda: bool):
     step += 1
     
     # onnxruntime 설치
-    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] onnxruntime 설치...")
+    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] onnxruntime 강제 재설치...")
     
     if use_uv:
+        console.print("  [dim]Uninstalling existing onnxruntime...[/dim]")
         subprocess.run(["uv", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y"],
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        console.print("  [dim]Installing onnxruntime-gpu==1.18.0 (forced)...[/dim]")
+        subprocess.run(["uv", "pip", "install", "--reinstall", "--system", "onnxruntime-gpu==1.18.0"],
+                      check=True)
+        console.print("[green]✓[/green] onnxruntime-gpu==1.18.0 강제 설치 완료")
     else:
         subprocess.run([sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
                       capture_output=True)
-    
-    if engine in ["supertonic", "all"] and cuda:
-        if use_uv:
-            subprocess.run(["uv", "pip", "install", "--system", "onnxruntime-gpu==1.18.0"],
-                          capture_output=True, check=True)
-        else:
+        
+        if engine in ["supertonic", "all"] and cuda:
             subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime-gpu>=1.16.0", "-q"],
                           capture_output=True)
-    elif engine == "supertonic":
-        if use_uv:
-            subprocess.run(["uv", "pip", "install", "--system", "onnxruntime==1.18.0"],
-                          capture_output=True, check=True)
-        else:
+        elif engine == "supertonic":
             subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime>=1.16.0", "-q"],
                           capture_output=True)
     step += 1
@@ -496,22 +496,33 @@ def setup(engine: str, cuda: bool):
                 console.print(f"[yellow]⚠️ Some requirements failed, but continuing...[/yellow]")
         
         # 핵심 패키지 정확한 버전으로 강제 설치
-        console.print("  [dim]Installing core packages with exact versions...[/dim]")
+        console.print("  [dim]Installing core packages with exact versions (uv)...[/dim]")
         
         # torch, torchaudio 정확한 버전
+        console.print("  [dim]→ torch==2.3.1, torchaudio==2.3.1 (forced)...[/dim]")
         subprocess.run([
             "uv", "pip", "install", "--reinstall", "--system",
             "torch==2.3.1", "torchaudio==2.3.1",
             "--index-url", "https://download.pytorch.org/whl/cu121"
-        ], capture_output=True, check=True)
+        ], check=True)
+        console.print("[green]  ✓[/green] torch, torchaudio 설치 완료")
         
-        # onnxruntime-gpu, transformers, whisper
+        # onnxruntime-gpu 재확인 (중요!)
+        console.print("  [dim]→ onnxruntime-gpu==1.18.0 재확인 (forced)...[/dim]")
         subprocess.run([
             "uv", "pip", "install", "--reinstall", "--system",
-            "onnxruntime-gpu==1.18.0",
+            "onnxruntime-gpu==1.18.0"
+        ], check=True)
+        console.print("[green]  ✓[/green] onnxruntime-gpu 재설치 완료")
+        
+        # transformers, whisper
+        console.print("  [dim]→ transformers==4.51.3, openai-whisper (forced)...[/dim]")
+        subprocess.run([
+            "uv", "pip", "install", "--reinstall", "--system",
             "transformers==4.51.3",
             "openai-whisper"
-        ], capture_output=True, check=True)
+        ], check=True)
+        console.print("[green]  ✓[/green] transformers, whisper 설치 완료")
         
         # CosyVoice 패키지 editable install (중요!)
         console.print("  [dim]Installing CosyVoice package (editable)...[/dim]")
