@@ -31,6 +31,32 @@ class TTSRequest(BaseModel):
         ge=0.0, le=2.0,
         description="청크 사이 무음 시간 (초, 기본값: 0.3)"
     )
+    
+    # GPT-SoVITS 엔진 파라미터
+    top_k: Optional[int] = Field(
+        default=None,
+        ge=1, le=100,
+        description="Top-K 샘플링 (기본값: 15)"
+    )
+    top_p: Optional[float] = Field(
+        default=None,
+        ge=0.0, le=1.0,
+        description="Top-P 샘플링 (기본값: 1.0)"
+    )
+    temperature: Optional[float] = Field(
+        default=None,
+        ge=0.1, le=2.0,
+        description="생성 다양성 (기본값: 1.0, 높을수록 다양)"
+    )
+    sample_steps: Optional[int] = Field(
+        default=None,
+        ge=1, le=100,
+        description="샘플링 스텝 수 (기본값: 32 for v3)"
+    )
+    seed: Optional[int] = Field(
+        default=None,
+        description="랜덤 시드 (기본값: -1, 재현성 위해 설정)"
+    )
 
 
 class ModelInfo(BaseModel):

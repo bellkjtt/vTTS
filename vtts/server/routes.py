@@ -91,10 +91,24 @@ async def create_speech(
     try:
         # 엔진별 추가 파라미터
         extra_params = {}
+        
+        # Supertonic 파라미터
         if tts_request.total_steps is not None:
             extra_params["total_steps"] = tts_request.total_steps
         if tts_request.silence_duration is not None:
             extra_params["silence_duration"] = tts_request.silence_duration
+        
+        # GPT-SoVITS 파라미터
+        if tts_request.top_k is not None:
+            extra_params["top_k"] = tts_request.top_k
+        if tts_request.top_p is not None:
+            extra_params["top_p"] = tts_request.top_p
+        if tts_request.temperature is not None:
+            extra_params["temperature"] = tts_request.temperature
+        if tts_request.sample_steps is not None:
+            extra_params["sample_steps"] = tts_request.sample_steps
+        if tts_request.seed is not None:
+            extra_params["seed"] = tts_request.seed
         
         # 엔진 요청 변환
         engine_request = EngineTTSRequest(

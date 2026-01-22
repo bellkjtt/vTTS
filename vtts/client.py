@@ -69,7 +69,15 @@ class VTTSClient:
         reference_text: Optional[str] = None,
         # Supertonic 엔진 파라미터
         total_steps: Optional[int] = None,
-        silence_duration: Optional[float] = None
+        silence_duration: Optional[float] = None,
+        # GPT-SoVITS 엔진 파라미터
+        top_k: Optional[int] = None,
+        top_p: Optional[float] = None,
+        temperature: Optional[float] = None,
+        sample_steps: Optional[int] = None,
+        seed: Optional[int] = None,
+        # 범용 파라미터
+        extra_params: Optional[dict] = None
     ) -> AudioResponse:
         """
         텍스트를 음성으로 변환합니다.
@@ -79,12 +87,24 @@ class VTTSClient:
             model: 모델 ID (None이면 서버의 기본 모델)
             voice: 음성 ID
             language: 언어 코드 (ko, en, ja, etc)
-            speed: 속도 (0.25 ~ 4.0, Supertonic 기본값: 1.05)
+            speed: 속도 (0.25 ~ 4.0)
             response_format: 응답 포맷 (mp3, wav, flac, etc)
-            reference_audio: 참조 오디오 (zero-shot용)
-            reference_text: 참조 텍스트
+            reference_audio: 참조 오디오 (zero-shot용, GPT-SoVITS 필수)
+            reference_text: 참조 텍스트 (GPT-SoVITS 필수)
+            
+            # Supertonic 전용
             total_steps: Denoising steps (기본값: 5, 높을수록 품질↑ 속도↓)
             silence_duration: 청크 사이 무음 시간 (초, 기본값: 0.3)
+            
+            # GPT-SoVITS 전용
+            top_k: Top-K 샘플링 (기본값: 15)
+            top_p: Top-P 샘플링 (기본값: 1.0)
+            temperature: 생성 다양성 (기본값: 1.0, 높을수록 다양)
+            sample_steps: 샘플링 스텝 수 (기본값: 32 for v3)
+            seed: 랜덤 시드 (기본값: -1, 재현성 위해 설정)
+            
+            # 범용
+            extra_params: 엔진별 추가 파라미터 딕셔너리
             
         Returns:
             AudioResponse: 오디오 응답
@@ -106,10 +126,28 @@ class VTTSClient:
             payload["reference_audio"] = reference_audio
         if reference_text:
             payload["reference_text"] = reference_text
+        
+        # Supertonic 파라미터
         if total_steps is not None:
             payload["total_steps"] = total_steps
         if silence_duration is not None:
             payload["silence_duration"] = silence_duration
+        
+        # GPT-SoVITS 파라미터
+        if top_k is not None:
+            payload["top_k"] = top_k
+        if top_p is not None:
+            payload["top_p"] = top_p
+        if temperature is not None:
+            payload["temperature"] = temperature
+        if sample_steps is not None:
+            payload["sample_steps"] = sample_steps
+        if seed is not None:
+            payload["seed"] = seed
+        
+        # 추가 파라미터 (extra_params로 전달된 것들)
+        if extra_params:
+            payload.update(extra_params)
         
         logger.info(f"Synthesizing: {text[:50]}...")
         
