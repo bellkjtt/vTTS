@@ -348,7 +348,7 @@ def setup(engine: str, cuda: bool):
     if use_uv:
         # uv 사용 (정확한 버전)
         subprocess.run(["uv", "pip", "uninstall", "numpy", "-y"], 
-                      capture_output=True, stderr=subprocess.DEVNULL)
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["uv", "pip", "install", "--system", "numpy==1.26.4"], 
                       capture_output=True, check=True)
     else:
@@ -364,7 +364,7 @@ def setup(engine: str, cuda: bool):
     
     if use_uv:
         subprocess.run(["uv", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y"],
-                      capture_output=True, stderr=subprocess.DEVNULL)
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
         subprocess.run([sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
                       capture_output=True)
