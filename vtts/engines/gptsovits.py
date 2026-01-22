@@ -172,6 +172,11 @@ class GPTSoVITSEngine(BaseTTSEngine):
             else:
                 logger.info(f"Using existing pretrained models: {pretrained_dir}")
             
+            # fast-langdetect 캐시 디렉토리 생성
+            fast_langdetect_dir = os.path.join(pretrained_dir, "fast_langdetect")
+            os.makedirs(fast_langdetect_dir, exist_ok=True)
+            logger.info(f"Ensured fast-langdetect cache directory: {fast_langdetect_dir}")
+            
             # sys.path에 추가
             if self._gpt_sovits_path not in sys.path:
                 sys.path.insert(0, self._gpt_sovits_path)
@@ -408,11 +413,19 @@ class GPTSoVITSEngine(BaseTTSEngine):
         
         if isinstance(reference, (str, Path)):
             path = Path(reference)
+            
+            # 상대 경로인 경우 절대 경로로 변환
+            # (서버가 chdir로 디렉토리를 변경했을 수 있으므로)
+            if not path.is_absolute():
+                path = path.resolve()
+                logger.info(f"Resolved relative path to: {path}")
+            
             if path.exists():
+                logger.info(f"Using reference audio: {path}")
                 return str(path.absolute())
             
             # base64 인코딩된 데이터인지 확인
-            if reference.startswith("data:audio"):
+            if isinstance(reference, str) and reference.startswith("data:audio"):
                 # data:audio/wav;base64,xxxxx 형식
                 header, data = reference.split(",", 1)
                 audio_bytes = base64.b64decode(data)
@@ -422,9 +435,10 @@ class GPTSoVITSEngine(BaseTTSEngine):
                 )
                 temp_file.write(audio_bytes)
                 temp_file.close()
+                logger.info(f"Decoded base64 audio to: {temp_file.name}")
                 return temp_file.name
             
-            raise FileNotFoundError(f"Reference audio not found: {reference}")
+            raise FileNotFoundError(f"Reference audio not found: {reference} (resolved to: {path})")
         
         elif isinstance(reference, bytes):
             # bytes 데이터
