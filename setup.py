@@ -170,11 +170,17 @@ setup(
         "gptsovits": GPTSOVITS_DEPS,
         
         # ============================================================
-        # 조합 (충돌 가능성 있음 - Docker 권장)
+        # 조합 엔진
         # ============================================================
+        
+        # Supertonic + GPT-SoVITS (호환 보장, 권장 조합!)
+        "supertonic-gptsovits": SUPERTONIC_DEPS + GPTSOVITS_DEPS,
         
         # Supertonic + CosyVoice (비교적 안전)
         "supertonic-cosyvoice": SUPERTONIC_DEPS + COSYVOICE_DEPS,
+        
+        # CosyVoice + GPT-SoVITS (충돌 가능성 - Docker 권장)
+        "cosyvoice-gptsovits": COSYVOICE_DEPS + GPTSOVITS_DEPS,
         
         # 전체 설치 (충돌 가능 - Docker 강력 권장!)
         "all": SUPERTONIC_DEPS + COSYVOICE_DEPS + GPTSOVITS_DEPS,

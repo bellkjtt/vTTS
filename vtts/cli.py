@@ -320,7 +320,10 @@ def setup(engine: str, cuda: bool):
         console.print("[yellow]⚠️ CUDA가 감지되지 않았습니다. CPU 모드로 설치합니다.[/yellow]")
         cuda = False
     
-    total_steps = 4 if engine in ["gptsovits", "all"] else 3
+    # 스텝 계산: GPT-SoVITS 또는 CosyVoice는 저장소 클론 포함
+    total_steps = 3
+    if engine in ["gptsovits", "cosyvoice", "all"]:
+        total_steps = 4
     step = 1
     
     # numpy 먼저 설치 (호환성)
@@ -401,6 +404,67 @@ def setup(engine: str, cuda: bool):
         
         console.print("\n[bold yellow]⚠️ 환경변수를 영구 설정하려면:[/bold yellow]")
         console.print(f"  [dim]export GPT_SOVITS_PATH={gpt_sovits_path}[/dim]")
+        console.print(f"  [dim]위 명령을 ~/.bashrc 또는 ~/.zshrc에 추가하세요[/dim]")
+        
+        step += 1
+    
+    # ============================================================
+    # CosyVoice: 저장소 자동 클론 및 설치
+    # ============================================================
+    if engine in ["cosyvoice", "all"]:
+        console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] CosyVoice 저장소 설치...")
+        
+        # 설치 경로 결정
+        cosyvoice_path = os.environ.get("COSYVOICE_PATH")
+        
+        if not cosyvoice_path:
+            # 기본 경로: ~/.vtts/CosyVoice
+            vtts_dir = Path.home() / ".vtts"
+            vtts_dir.mkdir(exist_ok=True)
+            cosyvoice_path = vtts_dir / "CosyVoice"
+        else:
+            cosyvoice_path = Path(cosyvoice_path)
+        
+        if cosyvoice_path.exists():
+            console.print(f"  [dim]CosyVoice already exists: {cosyvoice_path}[/dim]")
+            console.print("  [dim]Pulling latest changes...[/dim]")
+            result = subprocess.run(
+                ["git", "-C", str(cosyvoice_path), "pull"],
+                capture_output=True, text=True
+            )
+        else:
+            console.print(f"  [dim]Cloning to: {cosyvoice_path}[/dim]")
+            result = subprocess.run(
+                ["git", "clone", "--depth", "1",
+                 "https://github.com/FunAudioLLM/CosyVoice.git",
+                 str(cosyvoice_path)],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode != 0:
+                console.print(f"[red]❌ Git clone failed: {result.stderr}[/red]")
+                return
+        
+        # CosyVoice requirements 설치
+        console.print("  [dim]Installing CosyVoice requirements...[/dim]")
+        req_file = cosyvoice_path / "requirements.txt"
+        
+        if req_file.exists():
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", str(req_file), "-q"],
+                capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                console.print(f"[yellow]⚠️ Some requirements failed, but continuing...[/yellow]")
+        
+        # 환경변수 설정 안내
+        console.print(f"\n[green]✓[/green] CosyVoice installed: {cosyvoice_path}")
+        
+        # 자동으로 환경변수 설정 (현재 세션)
+        os.environ["COSYVOICE_PATH"] = str(cosyvoice_path)
+        
+        console.print("\n[bold yellow]⚠️ 환경변수를 영구 설정하려면:[/bold yellow]")
+        console.print(f"  [dim]export COSYVOICE_PATH={cosyvoice_path}[/dim]")
         console.print(f"  [dim]위 명령을 ~/.bashrc 또는 ~/.zshrc에 추가하세요[/dim]")
         
         step += 1

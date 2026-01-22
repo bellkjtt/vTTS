@@ -40,62 +40,77 @@
 
 ## 🚀 빠른 시작
 
-### 방법 1: Supertonic만 사용 (가장 간편)
+> **⚠️ 의존성 충돌 안내**  
+> 엔진마다 의존성이 다릅니다. **로컬 설치는 한 번에 하나의 엔진만** 설치하는 것을 권장합니다.  
+> 여러 엔진을 동시에 사용하려면 **Docker 사용**을 강력히 권장합니다!
+
+### 📦 로컬 설치 (간편 모드)
+
+#### 옵션 1: Supertonic만 (가장 가볍고 빠름) ⭐
 
 ```bash
-# 기본 설치 (GPU 자동 지원)
+# GPU 자동 지원
 pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
-
-# CPU 전용 (GPU 없는 환경)
-pip install "vtts[supertonic-cpu] @ git+https://github.com/bellkjtt/vTTS.git"
 
 # 서버 실행
 vtts serve Supertone/supertonic-2 --device cuda
 ```
 
-### 방법 2: GPT-SoVITS 설치 (음성 클로닝)
+#### 옵션 2: Supertonic + GPT-SoVITS (호환 보장!) ⭐
 
 ```bash
-# 1. vTTS 기본 설치
-pip install git+https://github.com/bellkjtt/vTTS.git
+# 1. 통합 설치 (의존성 호환 검증됨)
+pip install "vtts[supertonic-gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# 2. GPT-SoVITS 자동 설치 (저장소 클론 + 의존성 자동 처리!)
+# 2. GPT-SoVITS 저장소 자동 클론
 vtts setup --engine gptsovits
 
-# 3. 서버 실행
-vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
+# 3. 서버 실행 (각각 다른 포트)
+vtts serve Supertone/supertonic-2 --port 8001 --device cuda
+vtts serve kevinwang676/GPT-SoVITS-v3 --port 8002 --device cuda
 ```
 
-> 💡 `vtts setup`은 GPT-SoVITS를 `~/.vtts/GPT-SoVITS`에 자동으로 클론하고 의존성을 설치합니다.
+> 💡 **Supertonic + GPT-SoVITS는 같이 설치해도 충돌하지 않습니다!**
 
-### 방법 3: Docker (의존성 충돌 방지, 권장)
+#### 옵션 3: CosyVoice만 (별도 환경 권장)
 
 ```bash
-# Supertonic (가장 빠름)
+# 1. 기본 설치
+pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 2. CosyVoice 저장소 자동 클론
+vtts setup --engine cosyvoice
+
+# 3. 서버 실행
+vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda
+```
+
+> ⚠️ **CosyVoice는 의존성 충돌 가능성이 있습니다. 별도 가상환경 또는 Docker 사용 권장!**
+
+### 🐳 Docker (여러 엔진 동시 사용)
+
+```bash
+# 개별 실행
 docker-compose up -d supertonic   # :8001
-
-# GPT-SoVITS (음성 클로닝) - reference_audio 볼륨 필요
-mkdir -p reference_audio
-docker-compose up -d gptsovits    # :8002
-
-# CosyVoice (고품질)
+docker-compose up -d gptsovits    # :8002 (reference_audio 폴더 필요)
 docker-compose up -d cosyvoice    # :8003
 
-# 전체 + API Gateway
-docker-compose --profile gateway up -d  # :8000
+# 전체 + Nginx API Gateway
+docker-compose --profile gateway up -d  # :8000 (통합 엔드포인트)
 ```
 
 📖 자세한 내용: [Docker 가이드](DOCKER.md)
 
-### 방법 4: CLI 자동 설치
+### 🛠️ CLI 자동 설치
 
 ```bash
-# 기본 설치 후 엔진 추가
+# 기본 설치
 pip install git+https://github.com/bellkjtt/vTTS.git
 
-vtts setup --engine supertonic --cuda   # Supertonic + CUDA
-vtts setup --engine gptsovits           # GPT-SoVITS (저장소 클론 포함)
-vtts setup --engine all                 # 모든 엔진
+# 엔진별 자동 설치 (저장소 클론 + 의존성)
+vtts setup --engine supertonic           # Supertonic만
+vtts setup --engine gptsovits            # GPT-SoVITS (저장소 자동 클론)
+vtts setup --engine cosyvoice            # CosyVoice (저장소 자동 클론)
 ```
 
 ---
