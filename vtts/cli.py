@@ -307,6 +307,7 @@ def setup(engine: str, cuda: bool):
         vtts setup --engine supertonic         # Supertonic (CPU)
         vtts setup --engine supertonic --cuda  # Supertonic (GPU)
         vtts setup --engine gptsovits          # GPT-SoVITS (저장소 자동 클론)
+        vtts setup --engine cosyvoice          # CosyVoice (uv 자동 설치 + 정확한 버전)
         vtts setup --engine all                # 모든 엔진
     """
     import torch
@@ -320,31 +321,68 @@ def setup(engine: str, cuda: bool):
         console.print("[yellow]⚠️ CUDA가 감지되지 않았습니다. CPU 모드로 설치합니다.[/yellow]")
         cuda = False
     
-    # 스텝 계산: GPT-SoVITS 또는 CosyVoice는 저장소 클론 포함
-    total_steps = 3
-    if engine in ["gptsovits", "cosyvoice", "all"]:
-        total_steps = 4
+    # ============================================================
+    # CosyVoice: uv 필수! (정확한 버전 관리)
+    # ============================================================
+    use_uv = engine in ["cosyvoice", "all"]
+    
+    if use_uv:
+        # uv 설치 확인
+        console.print("[cyan]→[/cyan] [1/?] uv 패키지 관리자 확인...")
+        uv_check = subprocess.run(["uv", "--version"], capture_output=True, text=True)
+        
+        if uv_check.returncode != 0:
+            console.print("  [dim]uv가 설치되지 않았습니다. 설치 중...[/dim]")
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", "uv"], check=True)
+            console.print("[green]✓[/green] uv 설치 완료!")
+        else:
+            console.print(f"[green]✓[/green] uv 이미 설치됨: {uv_check.stdout.strip()}")
+    
+    # 스텝 계산
+    total_steps = 3 if engine == "supertonic" else 4
     step = 1
     
     # numpy 먼저 설치 (호환성)
-    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] numpy 호환성 확인...")
-    subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y", "-q"],
-                  capture_output=True)
-    subprocess.run([sys.executable, "-m", "pip", "install", "numpy>=1.24.0,<2.0.0", "-q"],
-                  capture_output=True)
+    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] numpy 정확한 버전 설치...")
+    
+    if use_uv:
+        # uv 사용 (정확한 버전)
+        subprocess.run(["uv", "pip", "uninstall", "numpy", "-y"], 
+                      capture_output=True, stderr=subprocess.DEVNULL)
+        subprocess.run(["uv", "pip", "install", "--system", "numpy==1.26.4"], 
+                      capture_output=True, check=True)
+    else:
+        # pip 사용
+        subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y", "-q"],
+                      capture_output=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "numpy>=1.24.0,<2.0.0", "-q"],
+                      capture_output=True)
     step += 1
     
     # onnxruntime 설치
     console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] onnxruntime 설치...")
-    subprocess.run([sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
-                  capture_output=True)
+    
+    if use_uv:
+        subprocess.run(["uv", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y"],
+                      capture_output=True, stderr=subprocess.DEVNULL)
+    else:
+        subprocess.run([sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
+                      capture_output=True)
     
     if engine in ["supertonic", "all"] and cuda:
-        subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime-gpu>=1.16.0", "-q"],
-                      capture_output=True)
+        if use_uv:
+            subprocess.run(["uv", "pip", "install", "--system", "onnxruntime-gpu==1.18.0"],
+                          capture_output=True, check=True)
+        else:
+            subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime-gpu>=1.16.0", "-q"],
+                          capture_output=True)
     elif engine == "supertonic":
-        subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime>=1.16.0", "-q"],
-                      capture_output=True)
+        if use_uv:
+            subprocess.run(["uv", "pip", "install", "--system", "onnxruntime==1.18.0"],
+                          capture_output=True, check=True)
+        else:
+            subprocess.run([sys.executable, "-m", "pip", "install", "onnxruntime>=1.16.0", "-q"],
+                          capture_output=True)
     step += 1
     
     # ============================================================
@@ -409,7 +447,7 @@ def setup(engine: str, cuda: bool):
         step += 1
     
     # ============================================================
-    # CosyVoice: 저장소 자동 클론 및 설치
+    # CosyVoice: 저장소 자동 클론 및 설치 (uv 사용!)
     # ============================================================
     if engine in ["cosyvoice", "all"]:
         console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] CosyVoice 저장소 설치...")
@@ -445,17 +483,35 @@ def setup(engine: str, cuda: bool):
                 console.print(f"[red]❌ Git clone failed: {result.stderr}[/red]")
                 return
         
-        # CosyVoice requirements 설치
-        console.print("  [dim]Installing CosyVoice requirements...[/dim]")
+        # CosyVoice requirements 설치 (uv 사용!)
+        console.print("  [dim]Installing CosyVoice requirements (uv 사용 - 정확한 버전)...[/dim]")
         req_file = cosyvoice_path / "requirements.txt"
         
         if req_file.exists():
             result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-r", str(req_file), "-q"],
+                ["uv", "pip", "install", "-r", str(req_file), "--system"],
                 capture_output=True, text=True
             )
             if result.returncode != 0:
                 console.print(f"[yellow]⚠️ Some requirements failed, but continuing...[/yellow]")
+        
+        # 핵심 패키지 정확한 버전으로 강제 설치
+        console.print("  [dim]Installing core packages with exact versions...[/dim]")
+        
+        # torch, torchaudio 정확한 버전
+        subprocess.run([
+            "uv", "pip", "install", "--reinstall", "--system",
+            "torch==2.3.1", "torchaudio==2.3.1",
+            "--index-url", "https://download.pytorch.org/whl/cu121"
+        ], capture_output=True, check=True)
+        
+        # onnxruntime-gpu, transformers, whisper
+        subprocess.run([
+            "uv", "pip", "install", "--reinstall", "--system",
+            "onnxruntime-gpu==1.18.0",
+            "transformers==4.51.3",
+            "openai-whisper"
+        ], capture_output=True, check=True)
         
         # CosyVoice 패키지 editable install (중요!)
         console.print("  [dim]Installing CosyVoice package (editable)...[/dim]")
@@ -479,7 +535,7 @@ def setup(engine: str, cuda: bool):
         step += 1
     
     # 엔진별 의존성 설치
-    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] {engine} 의존성 설치...")
+    console.print(f"[cyan]→[/cyan] [{step}/{total_steps}] vTTS + {engine} 의존성 설치...")
     
     extras = {
         "supertonic": "supertonic-cuda" if cuda else "supertonic",
@@ -490,13 +546,29 @@ def setup(engine: str, cuda: bool):
     
     extra = extras.get(engine, "supertonic")
     
-    # GitHub에서 설치
-    result = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q",
-         f"vtts[{extra}] @ git+https://github.com/bellkjtt/vTTS.git"],
-        capture_output=True,
-        text=True
-    )
+    # CosyVoice는 uv 사용 (정확한 버전 관리)
+    if use_uv:
+        console.print(f"  [dim]Using uv for precise dependency management...[/dim]")
+        result = subprocess.run(
+            ["uv", "pip", "install", "--system", "--no-deps",
+             f"vtts[{extra}] @ git+https://github.com/bellkjtt/vTTS.git"],
+            capture_output=True,
+            text=True
+        )
+        # vTTS 기본 의존성 설치
+        subprocess.run([
+            "uv", "pip", "install", "--system",
+            "fastapi", "uvicorn", "httpx", "pydantic>=2.0", "pydantic-settings",
+            "loguru", "soundfile", "huggingface-hub", "click"
+        ], capture_output=True, check=True)
+    else:
+        # GitHub에서 설치 (pip 사용)
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-q",
+             f"vtts[{extra}] @ git+https://github.com/bellkjtt/vTTS.git"],
+            capture_output=True,
+            text=True
+        )
     
     if result.returncode == 0:
         console.print(f"\n[bold green]✅ {engine} 엔진 설치 완료![/bold green]")
@@ -504,6 +576,9 @@ def setup(engine: str, cuda: bool):
         if engine == "gptsovits":
             console.print("\n[dim]사용법: vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda[/dim]")
             console.print("[dim]참고: reference_audio와 reference_text 파라미터가 필수입니다![/dim]\n")
+        elif engine == "cosyvoice":
+            console.print("\n[dim]사용법: vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda[/dim]")
+            console.print("[dim]참고: uv를 사용하여 정확한 버전이 설치되었습니다![/dim]\n")
         else:
             console.print("\n[dim]사용법: vtts serve Supertone/supertonic-2[/dim]\n")
     else:
