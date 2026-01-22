@@ -37,9 +37,7 @@ CORE_DEPS = [
     "loguru>=0.7.0,<1.0.0",
     
     # Core ML (엔진별로 다른 버전 필요 - 최소 버전만)
-    "torch>=2.0.0",  # 엔진별로 오버라이드됨
-    "torchaudio>=2.0.0",  # 엔진별로 오버라이드됨
-    "numpy>=1.24.0,<2.0.0",  # numpy 2.0 호환성 이슈 방지
+    # Note: numpy, torch는 엔진별로 정확히 지정됨 (여기서는 제외)
     
     # Audio Processing (공통)
     "soundfile>=0.12.0,<1.0.0",
@@ -63,18 +61,21 @@ STT_DEPS = [
 # Supertonic: ONNX 기반, 가벼움, PyTorch 불필요
 # 기본: GPU 지원 (CPU에서도 동작, GPU 있으면 자동 사용)
 SUPERTONIC_DEPS = [
-    "onnxruntime-gpu>=1.16.0,<1.19.0",  # 1.18.0 권장
+    "numpy==1.26.4",  # 정확히 고정 (ONNX 호환)
+    "onnxruntime-gpu==1.18.0",  # 정확히 고정 (권장)
 ]
 
 # CPU 전용 (GPU 드라이버 없는 환경)
 SUPERTONIC_CPU_DEPS = [
-    "onnxruntime>=1.16.0,<1.19.0",  # 1.18.0 권장
+    "numpy==1.26.4",  # 정확히 고정
+    "onnxruntime==1.18.0",  # 정확히 고정 (CPU)
 ]
 
 # GPT-SoVITS: RVC-Boss/GPT-SoVITS 공식 requirements.txt 기반
 # Note: GPT-SoVITS 저장소 클론 필요 (vtts setup --engine gptsovits)
 GPTSOVITS_DEPS = [
-    # Core ML (GPT-SoVITS 호환)
+    # Core Dependencies
+    "numpy==1.26.4",  # 정확히 고정
     "torch>=2.0.0",  # 버전 제약 없음 (유연)
     "torchaudio>=2.0.0",
     
@@ -126,9 +127,11 @@ GPTSOVITS_DEPS = [
 # ⚠️ 경고: transformers==4.51.3 필요 (GPT-SoVITS와 충돌!)
 # → Docker 사용 강력 권장!
 COSYVOICE_DEPS = [
-    # Core ML (CosyVoice 정확히 고정)
+    # Core Dependencies (정확히 고정!)
+    "numpy==1.26.4",  # 정확히 고정 (CosyVoice 호환)
     "torch==2.3.1",  # 정확히 고정
     "torchaudio==2.3.1",  # 정확히 고정
+    "onnxruntime-gpu==1.18.0",  # 정확히 고정 (CUDA)
     
     # Whisper (CosyVoice frontend 필수!)
     "openai-whisper>=20231117",
@@ -152,8 +155,6 @@ COSYVOICE_DEPS = [
     # ML Tools
     "lightning==2.2.4",
     "onnx==1.16.0",
-    "onnxruntime-gpu==1.18.0; sys_platform == 'linux'",
-    "onnxruntime==1.18.0; sys_platform == 'darwin' or sys_platform == 'win32'",
     
     # Utilities
     "hydra-core==1.3.2",
