@@ -149,14 +149,18 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 ```
 
 ### GPT-SoVITS (음성 클로닝)
-```bash
-# GPT-SoVITS 저장소 클론 필요! (위의 "방법 2" 참고)
-# 환경변수 설정 확인
-echo $GPT_SOVITS_PATH  # ~/GPT-SoVITS 출력되어야 함
 
-# 서버 실행
+```bash
+# GPT-SoVITS 저장소 설치 (위의 "방법 2" 참고)
+vtts setup --engine gptsovits
+
+# 서버 실행 (pretrained 모델 자동 다운로드됨! 🎉)
 vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 ```
+
+**💡 참고:**
+- 첫 실행 시 [HuggingFace](https://huggingface.co/kevinwang676/GPT-SoVITS-v3/tree/main/GPT_SoVITS/pretrained_models)에서 **자동으로 pretrained 모델을 다운로드**합니다 (~2.9 GB)
+- 모델은 `~/.cache/huggingface/` 에 캐시되며, 이후 재사용됩니다
 
 ### TTS + STT 동시
 ```bash
