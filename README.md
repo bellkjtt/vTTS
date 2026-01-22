@@ -228,21 +228,41 @@ audio = client.tts(
     reference_audio="./samples/reference.wav",  # 참조 오디오 (필수!)
     reference_text="참조 오디오에서 말하는 내용",  # 참조 텍스트 (필수!)
     # 🎛️ 품질 조절 파라미터 (선택)
-    speed=1.0,             # 속도 (0.5-2.0)
-    top_k=15,              # Top-K 샘플링 (1-100)
-    top_p=1.0,             # Top-P 샘플링 (0.0-1.0)
-    temperature=1.0,       # 다양성 (0.1-2.0, 낮을수록 안정적)
-    sample_steps=32,       # 샘플링 스텝 (1-100, 높을수록 품질↑)
-    seed=-1                # 시드 (-1: 랜덤, 고정값: 재현 가능)
+    speed=1.0,                  # 속도 (0.5-2.0)
+    top_k=15,                   # Top-K 샘플링 (1-100)
+    top_p=1.0,                  # Top-P 샘플링 (0.0-1.0)
+    temperature=1.0,            # 다양성 (0.1-2.0, 낮을수록 안정적)
+    sample_steps=32,            # 샘플링 스텝 (1-100, 높을수록 품질↑)
+    seed=-1,                    # 시드 (-1: 랜덤, 고정값: 재현 가능)
+    repetition_penalty=1.35,    # 반복 억제 (1.0-2.0, 높을수록 반복 감소)
+    text_split_method="cut5",   # 텍스트 분할 (cut5, four_sentences 등)
+    batch_size=1,               # 배치 크기 (1-10)
+    fragment_interval=0.3,      # 문장 조각 간 간격 초 (0.0-2.0)
+    parallel_infer=True         # 병렬 추론 활성화
 )
 audio.save("cloned_voice.wav")
 ```
 > ⚠️ GPT-SoVITS는 `reference_audio`와 `reference_text` 파라미터가 필수입니다!
 
-**파라미터 추천:**
-- **고품질/안정적**: `temperature=0.7, top_p=0.9, sample_steps=40`
-- **빠른 생성**: `sample_steps=16, top_k=10`
-- **다양한 결과**: `temperature=1.2, top_k=30`
+**파라미터 가이드:**
+| 파라미터 | 기본값 | 범위 | 설명 |
+|---------|-------|------|------|
+| `top_k` | 15 | 1-100 | Top-K 샘플링 (낮을수록 보수적) |
+| `top_p` | 1.0 | 0.0-1.0 | Nucleus 샘플링 (낮을수록 집중적) |
+| `temperature` | 1.0 | 0.1-2.0 | 생성 다양성 (낮을수록 안정적) |
+| `sample_steps` | 32 | 1-100 | 샘플링 스텝 (높을수록 품질↑) |
+| `seed` | -1 | -1 또는 양수 | 랜덤 시드 (-1: 랜덤) |
+| `repetition_penalty` | 1.35 | 1.0-2.0 | 반복 억제 (높을수록 반복 감소) |
+| `text_split_method` | cut5 | - | 텍스트 분할 방식 |
+| `batch_size` | 1 | 1-10 | 배치 크기 |
+| `fragment_interval` | 0.3 | 0.0-2.0 | 문장 간 무음 (초) |
+| `parallel_infer` | True | bool | 병렬 추론 |
+
+**시나리오별 추천:**
+- **고품질/안정적**: `temperature=0.7, top_p=0.9, sample_steps=40, repetition_penalty=1.5`
+- **빠른 생성**: `sample_steps=16, top_k=10, batch_size=2`
+- **다양한 결과**: `temperature=1.2, top_k=30, repetition_penalty=1.2`
+- **긴 텍스트**: `text_split_method="four_sentences", fragment_interval=0.5`
 
 ### OpenAI SDK 호환
 ```python

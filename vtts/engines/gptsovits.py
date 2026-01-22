@@ -349,7 +349,11 @@ class GPTSoVITSEngine(BaseTTSEngine):
                 
                 # extra_params에서 추가 파라미터 가져오기
                 if request.extra_params:
-                    for key in ["top_k", "top_p", "temperature", "sample_steps", "seed"]:
+                    for key in [
+                        "top_k", "top_p", "temperature", "sample_steps", "seed",
+                        "repetition_penalty", "text_split_method", "batch_size",
+                        "fragment_interval", "parallel_infer"
+                    ]:
                         if key in request.extra_params:
                             inference_req[key] = request.extra_params[key]
                 

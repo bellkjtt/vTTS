@@ -221,11 +221,43 @@ audio = client.tts(
     voice="reference",
     language="en",
     reference_audio="./samples/reference.wav",  # Reference audio (required!)
-    reference_text="This is what the reference audio says"  # Reference text (required!)
+    reference_text="This is what the reference audio says",  # Reference text (required!)
+    # 🎛️ Quality Control Parameters (optional)
+    speed=1.0,                  # Speed (0.5-2.0)
+    top_k=15,                   # Top-K sampling (1-100)
+    top_p=1.0,                  # Top-P sampling (0.0-1.0)
+    temperature=1.0,            # Diversity (0.1-2.0, lower = more stable)
+    sample_steps=32,            # Sampling steps (1-100, higher = better quality)
+    seed=-1,                    # Random seed (-1: random, fixed: reproducible)
+    repetition_penalty=1.35,    # Repetition penalty (1.0-2.0, higher = less repetition)
+    text_split_method="cut5",   # Text splitting method (cut5, four_sentences, etc)
+    batch_size=1,               # Batch size (1-10)
+    fragment_interval=0.3,      # Fragment interval in seconds (0.0-2.0)
+    parallel_infer=True         # Enable parallel inference
 )
 audio.save("cloned_voice.wav")
 ```
 > ⚠️ GPT-SoVITS requires `reference_audio` and `reference_text` parameters!
+
+**Parameter Guide:**
+| Parameter | Default | Range | Description |
+|---------|-------|------|------|
+| `top_k` | 15 | 1-100 | Top-K sampling (lower = more conservative) |
+| `top_p` | 1.0 | 0.0-1.0 | Nucleus sampling (lower = more focused) |
+| `temperature` | 1.0 | 0.1-2.0 | Generation diversity (lower = more stable) |
+| `sample_steps` | 32 | 1-100 | Sampling steps (higher = better quality) |
+| `seed` | -1 | -1 or positive | Random seed (-1: random) |
+| `repetition_penalty` | 1.35 | 1.0-2.0 | Repetition penalty (higher = less repetition) |
+| `text_split_method` | cut5 | - | Text splitting method |
+| `batch_size` | 1 | 1-10 | Batch size |
+| `fragment_interval` | 0.3 | 0.0-2.0 | Silence between fragments (seconds) |
+| `parallel_infer` | True | bool | Parallel inference |
+
+**Scenario Recommendations:**
+- **High Quality/Stable**: `temperature=0.7, top_p=0.9, sample_steps=40, repetition_penalty=1.5`
+- **Fast Generation**: `sample_steps=16, top_k=10, batch_size=2`
+- **Diverse Results**: `temperature=1.2, top_k=30, repetition_penalty=1.2`
+- **Long Text**: `text_split_method="four_sentences", fragment_interval=0.5`
 
 ### OpenAI SDK Compatible
 ```python

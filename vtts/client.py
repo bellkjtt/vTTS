@@ -76,6 +76,11 @@ class VTTSClient:
         temperature: Optional[float] = None,
         sample_steps: Optional[int] = None,
         seed: Optional[int] = None,
+        repetition_penalty: Optional[float] = None,
+        text_split_method: Optional[str] = None,
+        batch_size: Optional[int] = None,
+        fragment_interval: Optional[float] = None,
+        parallel_infer: Optional[bool] = None,
         # 범용 파라미터
         extra_params: Optional[dict] = None
     ) -> AudioResponse:
@@ -102,6 +107,11 @@ class VTTSClient:
             temperature: 생성 다양성 (기본값: 1.0, 높을수록 다양)
             sample_steps: 샘플링 스텝 수 (기본값: 32 for v3)
             seed: 랜덤 시드 (기본값: -1, 재현성 위해 설정)
+            repetition_penalty: 반복 억제 (기본값: 1.35, 높을수록 반복 감소)
+            text_split_method: 텍스트 분할 방식 (기본값: cut5)
+            batch_size: 배치 크기 (기본값: 1)
+            fragment_interval: 문장 조각 간 간격 초 (기본값: 0.3)
+            parallel_infer: 병렬 추론 활성화 (기본값: True)
             
             # 범용
             extra_params: 엔진별 추가 파라미터 딕셔너리
@@ -144,6 +154,16 @@ class VTTSClient:
             payload["sample_steps"] = sample_steps
         if seed is not None:
             payload["seed"] = seed
+        if repetition_penalty is not None:
+            payload["repetition_penalty"] = repetition_penalty
+        if text_split_method is not None:
+            payload["text_split_method"] = text_split_method
+        if batch_size is not None:
+            payload["batch_size"] = batch_size
+        if fragment_interval is not None:
+            payload["fragment_interval"] = fragment_interval
+        if parallel_infer is not None:
+            payload["parallel_infer"] = parallel_infer
         
         # 추가 파라미터 (extra_params로 전달된 것들)
         if extra_params:

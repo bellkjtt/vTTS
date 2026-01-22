@@ -109,6 +109,16 @@ async def create_speech(
             extra_params["sample_steps"] = tts_request.sample_steps
         if tts_request.seed is not None:
             extra_params["seed"] = tts_request.seed
+        if tts_request.repetition_penalty is not None:
+            extra_params["repetition_penalty"] = tts_request.repetition_penalty
+        if tts_request.text_split_method is not None:
+            extra_params["text_split_method"] = tts_request.text_split_method
+        if tts_request.batch_size is not None:
+            extra_params["batch_size"] = tts_request.batch_size
+        if tts_request.fragment_interval is not None:
+            extra_params["fragment_interval"] = tts_request.fragment_interval
+        if tts_request.parallel_infer is not None:
+            extra_params["parallel_infer"] = tts_request.parallel_infer
         
         # 엔진 요청 변환
         engine_request = EngineTTSRequest(

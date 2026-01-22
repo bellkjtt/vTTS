@@ -221,11 +221,43 @@ audio = client.tts(
     voice="reference",
     language="zh",
     reference_audio="./samples/reference.wav",  # 参考音频 (必需!)
-    reference_text="参考音频说的内容"  # 参考文本 (必需!)
+    reference_text="参考音频说的内容",  # 参考文本 (必需!)
+    # 🎛️ 质量调节参数 (可选)
+    speed=1.0,                  # 速度 (0.5-2.0)
+    top_k=15,                   # Top-K采样 (1-100)
+    top_p=1.0,                  # Top-P采样 (0.0-1.0)
+    temperature=1.0,            # 多样性 (0.1-2.0, 越低越稳定)
+    sample_steps=32,            # 采样步数 (1-100, 越高质量越好)
+    seed=-1,                    # 随机种子 (-1: 随机, 固定值: 可重现)
+    repetition_penalty=1.35,    # 重复惩罚 (1.0-2.0, 越高重复越少)
+    text_split_method="cut5",   # 文本分割方法 (cut5, four_sentences等)
+    batch_size=1,               # 批量大小 (1-10)
+    fragment_interval=0.3,      # 片段间隔秒数 (0.0-2.0)
+    parallel_infer=True         # 启用并行推理
 )
 audio.save("cloned_voice.wav")
 ```
 > ⚠️ GPT-SoVITS需要 `reference_audio` 和 `reference_text` 参数!
+
+**参数指南:**
+| 参数 | 默认值 | 范围 | 说明 |
+|---------|-------|------|------|
+| `top_k` | 15 | 1-100 | Top-K采样 (越低越保守) |
+| `top_p` | 1.0 | 0.0-1.0 | Nucleus采样 (越低越集中) |
+| `temperature` | 1.0 | 0.1-2.0 | 生成多样性 (越低越稳定) |
+| `sample_steps` | 32 | 1-100 | 采样步数 (越高质量越好) |
+| `seed` | -1 | -1或正数 | 随机种子 (-1: 随机) |
+| `repetition_penalty` | 1.35 | 1.0-2.0 | 重复惩罚 (越高重复越少) |
+| `text_split_method` | cut5 | - | 文本分割方法 |
+| `batch_size` | 1 | 1-10 | 批量大小 |
+| `fragment_interval` | 0.3 | 0.0-2.0 | 片段间静音 (秒) |
+| `parallel_infer` | True | bool | 并行推理 |
+
+**场景推荐:**
+- **高质量/稳定**: `temperature=0.7, top_p=0.9, sample_steps=40, repetition_penalty=1.5`
+- **快速生成**: `sample_steps=16, top_k=10, batch_size=2`
+- **多样化结果**: `temperature=1.2, top_k=30, repetition_penalty=1.2`
+- **长文本**: `text_split_method="four_sentences", fragment_interval=0.5`
 
 ### OpenAI SDK兼容
 ```python

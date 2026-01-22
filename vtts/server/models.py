@@ -57,6 +57,29 @@ class TTSRequest(BaseModel):
         default=None,
         description="랜덤 시드 (기본값: -1, 재현성 위해 설정)"
     )
+    repetition_penalty: Optional[float] = Field(
+        default=None,
+        ge=1.0, le=2.0,
+        description="반복 억제 (기본값: 1.35, 높을수록 반복 감소)"
+    )
+    text_split_method: Optional[str] = Field(
+        default=None,
+        description="텍스트 분할 방식 (cut5, four_sentences 등, 기본값: cut5)"
+    )
+    batch_size: Optional[int] = Field(
+        default=None,
+        ge=1, le=10,
+        description="배치 크기 (기본값: 1)"
+    )
+    fragment_interval: Optional[float] = Field(
+        default=None,
+        ge=0.0, le=2.0,
+        description="문장 조각 간 간격 초 (기본값: 0.3)"
+    )
+    parallel_infer: Optional[bool] = Field(
+        default=None,
+        description="병렬 추론 활성화 (기본값: True)"
+    )
 
 
 class ModelInfo(BaseModel):
