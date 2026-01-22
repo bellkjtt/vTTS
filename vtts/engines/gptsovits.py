@@ -131,18 +131,46 @@ class GPTSoVITSEngine(BaseTTSEngine):
             self._gpt_sovits_path = self._setup_gpt_sovits_path()
             logger.info(f"GPT-SoVITS path: {self._gpt_sovits_path}")
             
-            # HuggingFace에서 pretrained 모델 다운로드
-            logger.info(f"Downloading pretrained models from HuggingFace: {self.model_id}")
-            model_path = snapshot_download(
-                repo_id=self.model_id,
-                allow_patterns=["GPT_SoVITS/pretrained_models/**"],  # pretrained_models만 다운로드
-                cache_dir=None,  # 기본 HF 캐시 사용 (~/.cache/huggingface/)
-                resume_download=True
+            # Pretrained 모델 경로 (로컬 GPT-SoVITS 저장소 기준)
+            pretrained_dir = os.path.join(
+                self._gpt_sovits_path, "GPT_SoVITS", "pretrained_models"
             )
-            logger.info(f"Pretrained models downloaded to: {model_path}")
             
-            # Pretrained 모델 경로 설정
-            pretrained_dir = os.path.join(model_path, "GPT_SoVITS", "pretrained_models")
+            # HuggingFace에서 pretrained 모델 다운로드 (없는 경우만)
+            if not os.path.exists(os.path.join(pretrained_dir, "s1v3.ckpt")):
+                logger.info(f"Downloading pretrained models from HuggingFace: {self.model_id}")
+                hf_model_path = snapshot_download(
+                    repo_id=self.model_id,
+                    allow_patterns=["GPT_SoVITS/pretrained_models/**"],
+                    cache_dir=None,
+                    resume_download=True
+                )
+                logger.info(f"Models downloaded to HF cache: {hf_model_path}")
+                
+                # HF 캐시에서 로컬 GPT-SoVITS로 복사
+                import shutil
+                hf_pretrained_dir = os.path.join(hf_model_path, "GPT_SoVITS", "pretrained_models")
+                if os.path.exists(hf_pretrained_dir):
+                    logger.info(f"Copying pretrained models to: {pretrained_dir}")
+                    os.makedirs(pretrained_dir, exist_ok=True)
+                    
+                    # 디렉토리 내용 복사
+                    for item in os.listdir(hf_pretrained_dir):
+                        src = os.path.join(hf_pretrained_dir, item)
+                        dst = os.path.join(pretrained_dir, item)
+                        
+                        if os.path.isdir(src):
+                            if os.path.exists(dst):
+                                shutil.rmtree(dst)
+                            shutil.copytree(src, dst)
+                            logger.info(f"  Copied directory: {item}")
+                        else:
+                            shutil.copy2(src, dst)
+                            logger.info(f"  Copied file: {item}")
+                    
+                    logger.info("✅ Pretrained models copied successfully!")
+            else:
+                logger.info(f"Using existing pretrained models: {pretrained_dir}")
             
             # sys.path에 추가
             if self._gpt_sovits_path not in sys.path:
