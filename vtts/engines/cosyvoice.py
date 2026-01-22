@@ -1,22 +1,29 @@
-"""CosyVoice3 TTS Engine - Real Implementation"""
+"""CosyVoice3 TTS Engine - Embedded Implementation
+
+CosyVoice 코드가 vtts/engines/_cosyvoice/에 내장되어 있어
+별도의 클론이나 설치가 필요 없습니다.
+"""
 
 from pathlib import Path
 from typing import List, Optional, Union
 import os
-import sys
 
 import numpy as np
 import torch
 from loguru import logger
+from huggingface_hub import snapshot_download
 
 from vtts.engines.base import BaseTTSEngine, TTSOutput, TTSRequest
 
 
 class CosyVoiceEngine(BaseTTSEngine):
-    """CosyVoice3 TTS Engine
+    """CosyVoice3 TTS Engine (Embedded)
     
     Zero-shot multilingual TTS from FunAudioLLM (Alibaba).
     Supports 9 languages and 18+ Chinese dialects.
+    
+    CosyVoice 코드가 vtts에 내장되어 있어 별도 설치가 필요 없습니다!
+    모델만 HuggingFace에서 자동 다운로드됩니다.
     
     Supported languages: zh, en, ja, ko, yue, es, fr, de, pt
     Model sizes: 0.5B, 1.5B parameters
@@ -52,47 +59,13 @@ class CosyVoiceEngine(BaseTTSEngine):
             return
         
         logger.info(f"Loading CosyVoice model: {self.model_id}")
-        logger.info("This requires CosyVoice package to be installed")
-        
-        # CosyVoice 저장소 경로 확인 및 추가
-        # vTTS 프로젝트 루트 경로 찾기
-        vtts_root = Path(__file__).parent.parent.parent.resolve()
-        
-        cosyvoice_paths = [
-            os.environ.get("COSYVOICE_PATH"),  # 환경변수
-            str(vtts_root / "third_party" / "CosyVoice"),  # 프로젝트 내부 (우선순위 1)
-            os.path.expanduser("~/.vtts/CosyVoice"),  # 사용자 홈
-            "./third_party/CosyVoice",  # 상대 경로 (fallback)
-            "../CosyVoice",  # 상위 디렉토리 (fallback)
-        ]
-        
-        cosyvoice_found = False
-        for path in cosyvoice_paths:
-            if path and os.path.exists(path):
-                if path not in sys.path:
-                    sys.path.insert(0, path)
-                    logger.info(f"Added CosyVoice path to sys.path: {path}")
-                cosyvoice_found = True
-                break
-        
-        if not cosyvoice_found:
-            logger.warning(
-                "CosyVoice repository not found. "
-                "Install with: vtts setup --engine cosyvoice"
-            )
         
         try:
-            # CosyVoice 임포트
-            from cosyvoice.cli.cosyvoice import CosyVoice
-            from cosyvoice.utils.file_utils import load_wav
+            # 내장된 CosyVoice 모듈 import
+            from vtts.engines._cosyvoice.cli.cosyvoice import AutoModel
             
-            # 모델 로드
-            # HuggingFace 모델 사용
-            logger.info(f"Loading from HuggingFace: {self.model_id}")
-            
-            # CosyVoice는 model_dir을 직접 지정해야 함
-            # HuggingFace에서 다운로드
-            from huggingface_hub import snapshot_download
+            # HuggingFace에서 모델 다운로드
+            logger.info(f"Downloading model from HuggingFace: {self.model_id}")
             
             model_dir = snapshot_download(
                 repo_id=self.model_id,
@@ -101,22 +74,26 @@ class CosyVoiceEngine(BaseTTSEngine):
             
             logger.info(f"Model downloaded to: {model_dir}")
             
-            # CosyVoice 초기화
-            self.model = CosyVoice(model_dir)
+            # CosyVoice 자동 초기화 (v1/v2/v3 자동 감지)
+            self.model = AutoModel(model_dir=model_dir)
+            self._sample_rate = self.model.sample_rate
             self.is_loaded = True
             
             logger.info(f"Successfully loaded CosyVoice model: {self.model_id}")
+            logger.info(f"Sample rate: {self._sample_rate} Hz")
+            logger.info(f"Model type: {self.model.__class__.__name__}")
             logger.info("CosyVoice supports zero-shot voice cloning")
             
+            # 사용 가능한 speaker 목록
+            available_spks = self.model.list_available_spks()
+            if available_spks:
+                logger.info(f"Available speakers: {available_spks[:5]}...")  # 처음 5개만
+            
         except ImportError as e:
-            logger.error(
-                "CosyVoice package not installed. "
-                "Install from: https://github.com/FunAudioLLM/CosyVoice"
-            )
-            raise ImportError(
-                "CosyVoice package required. "
-                "Clone and install from: git clone https://github.com/FunAudioLLM/CosyVoice.git"
-            ) from e
+            logger.error(f"CosyVoice import failed: {e}")
+            logger.error("Required dependencies may be missing.")
+            logger.error("Install with: pip install vtts[cosyvoice]")
+            raise
         except Exception as e:
             logger.error(f"Failed to load CosyVoice model: {e}")
             raise
@@ -156,6 +133,9 @@ class CosyVoiceEngine(BaseTTSEngine):
             if isinstance(output_audio, torch.Tensor):
                 output_audio = output_audio.cpu().numpy()
             
+            # flatten
+            output_audio = output_audio.flatten()
+            
             # 정규화
             if output_audio.dtype != np.float32:
                 output_audio = output_audio.astype(np.float32)
@@ -174,7 +154,7 @@ class CosyVoiceEngine(BaseTTSEngine):
                     "language": request.language,
                     "mode": "zero-shot" if request.reference_audio else "sft",
                     "duration": duration,
-                    "engine": "cosyvoice3"
+                    "engine": "cosyvoice"
                 }
             )
             
@@ -190,20 +170,30 @@ class CosyVoiceEngine(BaseTTSEngine):
         # voice를 speaker ID로 매핑
         speaker = self._map_voice_to_speaker(request.voice)
         
+        # 속도 설정
+        speed = request.speed if hasattr(request, 'speed') and request.speed else 1.0
+        
         # inference_sft 호출
+        audio_chunks = []
         for output in self.model.inference_sft(
             tts_text=request.text,
             spk_id=speaker,
-            stream=False
+            stream=False,
+            speed=speed
         ):
             # output은 dict with 'tts_speech' key
             if isinstance(output, dict) and 'tts_speech' in output:
                 audio = output['tts_speech']
                 if isinstance(audio, torch.Tensor):
-                    return audio.cpu().numpy().flatten()
-                return np.array(audio).flatten()
+                    audio_chunks.append(audio.cpu().numpy())
+                else:
+                    audio_chunks.append(np.array(audio))
         
-        raise RuntimeError("No audio output from CosyVoice SFT mode")
+        if not audio_chunks:
+            raise RuntimeError("No audio output from CosyVoice SFT mode")
+        
+        # 모든 청크 연결
+        return np.concatenate([chunk.flatten() for chunk in audio_chunks])
     
     def _synthesize_zero_shot(self, request: TTSRequest) -> np.ndarray:
         """Zero-shot mode로 합성 (참조 오디오 사용)"""
@@ -213,51 +203,78 @@ class CosyVoiceEngine(BaseTTSEngine):
         reference_audio = self._load_reference_audio(request.reference_audio)
         reference_text = request.reference_text or "참조 음성입니다."
         
+        # 속도 설정
+        speed = request.speed if hasattr(request, 'speed') and request.speed else 1.0
+        
         # inference_zero_shot 호출
+        audio_chunks = []
         for output in self.model.inference_zero_shot(
             tts_text=request.text,
             prompt_text=reference_text,
-            prompt_speech_16k=reference_audio,
-            stream=False
+            prompt_wav=reference_audio,
+            stream=False,
+            speed=speed
         ):
             if isinstance(output, dict) and 'tts_speech' in output:
                 audio = output['tts_speech']
                 if isinstance(audio, torch.Tensor):
-                    return audio.cpu().numpy().flatten()
-                return np.array(audio).flatten()
+                    audio_chunks.append(audio.cpu().numpy())
+                else:
+                    audio_chunks.append(np.array(audio))
         
-        raise RuntimeError("No audio output from CosyVoice zero-shot mode")
+        if not audio_chunks:
+            raise RuntimeError("No audio output from CosyVoice zero-shot mode")
+        
+        # 모든 청크 연결
+        return np.concatenate([chunk.flatten() for chunk in audio_chunks])
     
-    def _load_reference_audio(self, reference: Union[str, Path, np.ndarray]) -> torch.Tensor:
-        """참조 오디오를 로드합니다 (16kHz 필요)"""
-        from cosyvoice.utils.file_utils import load_wav
-        import torchaudio
+    def _load_reference_audio(self, reference: Union[str, Path, bytes, np.ndarray]) -> str:
+        """참조 오디오를 로드합니다.
+        
+        CosyVoice는 파일 경로를 직접 받습니다.
+        bytes나 ndarray인 경우 임시 파일로 저장합니다.
+        """
+        import tempfile
+        import soundfile as sf
         
         if isinstance(reference, (str, Path)):
-            # 파일에서 로드
-            wav, sr = torchaudio.load(str(reference))
-            
-            # 16kHz로 리샘플
-            if sr != 16000:
-                resampler = torchaudio.transforms.Resample(sr, 16000)
-                wav = resampler(wav)
-            
-            return wav.mean(dim=0)  # mono
+            path = str(reference)
+            if os.path.exists(path):
+                return path
+            # base64인 경우
+            import base64
+            try:
+                audio_bytes = base64.b64decode(reference)
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+                    f.write(audio_bytes)
+                    return f.name
+            except:
+                raise FileNotFoundError(f"Reference audio not found: {path}")
+        
+        elif isinstance(reference, bytes):
+            # bytes를 임시 파일로 저장
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+                f.write(reference)
+                return f.name
         
         elif isinstance(reference, np.ndarray):
-            # numpy array를 tensor로 변환
-            wav = torch.from_numpy(reference).float()
-            if wav.ndim > 1:
-                wav = wav.mean(dim=0)
-            return wav
+            # numpy array를 임시 파일로 저장
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+                sf.write(f.name, reference, 16000)
+                return f.name
         
         else:
             raise ValueError(f"Unsupported reference audio type: {type(reference)}")
     
     def _map_voice_to_speaker(self, voice: str) -> str:
         """Voice ID를 CosyVoice speaker ID로 매핑"""
-        # CosyVoice는 여러 speaker를 지원
-        # 기본 speakers: 중국어_남성, 중국어_여성, 영어_남성, 영어_여성 등
+        if not voice:
+            return "中文女"
+        
+        # 먼저 사용 가능한 speakers에서 직접 찾기
+        available = self.model.list_available_spks()
+        if voice in available:
+            return voice
         
         voice_lower = voice.lower()
         
@@ -265,7 +282,7 @@ class CosyVoiceEngine(BaseTTSEngine):
         mapping = {
             "default": "中文女",
             "male": "中文男",
-            "female": "中문女",
+            "female": "中文女",
             "chinese_male": "中文男",
             "chinese_female": "中文女",
             "english_male": "英文男",
@@ -274,9 +291,20 @@ class CosyVoiceEngine(BaseTTSEngine):
             "japanese_female": "日语女",
             "korean_male": "韩语男",
             "korean_female": "韩语女",
+            "f1": "中文女",
+            "m1": "中文男",
         }
         
-        return mapping.get(voice_lower, "中文女")
+        # 매핑에서 찾기
+        speaker = mapping.get(voice_lower, "中文女")
+        
+        # 해당 speaker가 사용 가능한지 확인
+        if speaker not in available and available:
+            # 첫 번째 사용 가능한 speaker 사용
+            speaker = available[0]
+            logger.warning(f"Speaker '{voice}' not available, using '{speaker}'")
+        
+        return speaker
     
     @property
     def supported_languages(self) -> List[str]:
@@ -286,13 +314,21 @@ class CosyVoiceEngine(BaseTTSEngine):
     @property
     def supported_voices(self) -> List[str]:
         """지원하는 음성"""
-        return [
+        base_voices = [
             "default",
             "chinese_male", "chinese_female",
             "english_male", "english_female",
             "japanese_male", "japanese_female",
             "korean_male", "korean_female"
         ]
+        # 모델이 로드된 경우 실제 사용 가능한 speakers 추가
+        if self.is_loaded and self.model:
+            try:
+                available = self.model.list_available_spks()
+                return list(set(base_voices + available))
+            except:
+                pass
+        return base_voices
     
     @property
     def default_sample_rate(self) -> int:
