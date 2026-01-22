@@ -22,6 +22,7 @@ from typing import List, Optional, Union, Generator
 import numpy as np
 import torch
 from loguru import logger
+from huggingface_hub import snapshot_download
 
 from vtts.engines.base import BaseTTSEngine, TTSOutput, TTSRequest
 
