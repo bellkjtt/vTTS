@@ -52,29 +52,47 @@ RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
 WORKDIR /app
 
 # ============================================================
-# Python 의존성 설치 (레이어 캐싱 최적화)
+# CosyVoice 저장소 클론 및 의존성 설치 (공식 requirements 기반)
 # ============================================================
+ENV COSYVOICE_PATH=/opt/CosyVoice
+RUN git clone --depth 1 https://github.com/FunAudioLLM/CosyVoice.git ${COSYVOICE_PATH}
 
-# 1. PyTorch 먼저 설치 (CUDA 버전)
+WORKDIR ${COSYVOICE_PATH}
+
+# 1. PyTorch 정확히 고정 (CosyVoice requirements 기준)
 RUN pip3 install --no-cache-dir \
-    torch==2.1.0+cu121 \
-    torchaudio==2.1.0+cu121 \
+    torch==2.3.1+cu121 \
+    torchaudio==2.3.1+cu121 \
     --index-url https://download.pytorch.org/whl/cu121
 
-# 2. setup.py 복사
-COPY setup.py pyproject.toml ./
-COPY vtts/__init__.py vtts/
+# 2. numpy 버전 고정
+RUN pip3 install --no-cache-dir "numpy==1.26.4"
 
-# 3. CosyVoice 의존성 설치
+# 3. 핵심 의존성 정확히 고정
 RUN pip3 install --no-cache-dir \
-    modelscope>=1.9.0 \
-    HyperPyYAML>=1.2.0 \
-    conformer>=0.3.0 \
-    wetext>=0.0.4 \
-    x-transformers>=2.11.0 \
-    diffusers>=0.29.0
+    "transformers==4.51.3" \
+    "librosa==0.10.2" \
+    "soundfile==0.12.1" \
+    "modelscope==1.20.0" \
+    "HyperPyYAML==1.2.2" \
+    "conformer==0.3.2" \
+    "wetext==0.0.4" \
+    "x-transformers==2.11.24" \
+    "diffusers==0.29.0"
 
-# 4. vTTS 설치
+# 4. CosyVoice requirements 설치
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# ============================================================
+# vTTS 설치
+# ============================================================
+WORKDIR /app
+
+# setup.py 복사
+COPY setup.py pyproject.toml ./
+COPY vtts/ vtts/
+
+# vTTS 기본 설치 (cosyvoice deps는 이미 설치됨)
 RUN pip3 install --no-cache-dir -e .
 
 # ============================================================
@@ -93,5 +111,13 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
 # ============================================================
 # 엔트리포인트
 # ============================================================
+# ============================================================
+# 전체 앱 복사
+# ============================================================
+COPY . .
+
+# ============================================================
+# 엔트리포인트
+# ============================================================
 ENTRYPOINT ["vtts", "serve"]
-CMD ["FunAudioLLM/CosyVoice2-0.5B", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]
+CMD ["FunAudioLLM/Fun-CosyVoice3-0.5B-2512", "--host", "0.0.0.0", "--port", "8000", "--device", "auto"]

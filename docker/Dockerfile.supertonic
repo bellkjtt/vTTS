@@ -51,17 +51,21 @@ RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
 WORKDIR /app
 
 # ============================================================
-# Python 의존성 설치 (레이어 캐싱 최적화)
+# Python 의존성 설치 (정확한 버전 고정)
 # ============================================================
 
-# 1. 기본 의존성 먼저 설치
-COPY setup.py pyproject.toml ./
-COPY vtts/__init__.py vtts/
+# 1. numpy 버전 고정
+RUN pip3 install --no-cache-dir "numpy>=1.24.0,<2.0.0"
 
-# 2. Supertonic + CUDA 의존성 설치
-RUN pip3 install --no-cache-dir \
-    onnxruntime-gpu>=1.16.0 \
-    && pip3 install --no-cache-dir -e ".[supertonic-cuda]"
+# 2. onnxruntime-gpu 정확히 고정 (CosyVoice와 호환)
+RUN pip3 install --no-cache-dir "onnxruntime-gpu==1.18.0"
+
+# 3. setup.py 복사
+COPY setup.py pyproject.toml ./
+COPY vtts/ vtts/
+
+# 4. vTTS 기본 설치 (supertonic deps는 이미 설치됨)
+RUN pip3 install --no-cache-dir -e .
 
 # ============================================================
 # 앱 복사

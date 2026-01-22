@@ -72,17 +72,28 @@ RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
 RUN git clone --depth 1 https://github.com/RVC-Boss/GPT-SoVITS.git ${GPT_SOVITS_PATH}
 
 # ============================================================
-# Python 의존성 설치 (레이어 캐싱 최적화)
+# Python 의존성 설치 (GPT-SoVITS 공식 requirements 기반)
 # ============================================================
 WORKDIR ${GPT_SOVITS_PATH}
 
-# 1. PyTorch 먼저 설치 (CUDA 버전)
+# 1. PyTorch 먼저 설치 (CUDA 12.1)
 RUN pip3 install --no-cache-dir \
-    torch==2.1.0+cu121 \
-    torchaudio==2.1.0+cu121 \
+    torch==2.3.1+cu121 \
+    torchaudio==2.3.1+cu121 \
     --index-url https://download.pytorch.org/whl/cu121
 
-# 2. GPT-SoVITS requirements 설치
+# 2. numpy 버전 고정 (numpy 2.0 차단)
+RUN pip3 install --no-cache-dir "numpy>=1.24.0,<2.0.0"
+
+# 3. 핵심 의존성 버전 고정
+RUN pip3 install --no-cache-dir \
+    "transformers>=4.43.0,<=4.50.0" \
+    "peft<0.18.0" \
+    "librosa==0.10.2" \
+    "funasr==1.0.27" \
+    "pytorch-lightning>=2.4.0"
+
+# 4. 나머지 GPT-SoVITS requirements 설치
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # ============================================================

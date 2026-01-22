@@ -18,7 +18,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 # ============================================================
-# 공통 의존성 (버전 범위 명시로 충돌 최소화)
+# 공통 의존성 (최소한의 공통 패키지만 포함)
 # ============================================================
 CORE_DEPS = [
     # Web Framework
@@ -36,14 +36,13 @@ CORE_DEPS = [
     "rich>=13.0.0,<14.0.0",
     "loguru>=0.7.0,<1.0.0",
     
-    # ML Core (버전 범위 넓게 - 엔진별 호환성)
-    "torch>=2.0.0",
-    "torchaudio>=2.0.0",
+    # Core ML (엔진별로 다른 버전 필요 - 최소 버전만)
+    "torch>=2.0.0",  # 엔진별로 오버라이드됨
+    "torchaudio>=2.0.0",  # 엔진별로 오버라이드됨
     "numpy>=1.24.0,<2.0.0",  # numpy 2.0 호환성 이슈 방지
     
-    # Audio Processing
+    # Audio Processing (공통)
     "soundfile>=0.12.0,<1.0.0",
-    "librosa>=0.10.0,<1.0.0",
     
     # HuggingFace
     "huggingface-hub>=0.20.0,<1.0.0",
@@ -58,41 +57,37 @@ STT_DEPS = [
 ]
 
 # ============================================================
-# 엔진별 의존성 (격리)
+# 엔진별 의존성 (정확한 버전 고정 - 각 엔진 공식 requirements 기반)
 # ============================================================
 
-# Supertonic: ONNX 기반, 가벼움
+# Supertonic: ONNX 기반, 가벼움, PyTorch 불필요
 # 기본: GPU 지원 (CPU에서도 동작, GPU 있으면 자동 사용)
 SUPERTONIC_DEPS = [
-    "onnxruntime-gpu>=1.16.0,<2.0.0",
+    "onnxruntime-gpu>=1.16.0,<1.19.0",  # 1.18.0 권장
 ]
 
 # CPU 전용 (GPU 드라이버 없는 환경)
 SUPERTONIC_CPU_DEPS = [
-    "onnxruntime>=1.16.0,<2.0.0",
+    "onnxruntime>=1.16.0,<1.19.0",  # 1.18.0 권장
 ]
 
-# CosyVoice: ModelScope 기반
-COSYVOICE_DEPS = [
-    "modelscope>=1.9.0,<2.0.0",
-    "HyperPyYAML>=1.2.0,<2.0.0",
-    "conformer>=0.3.0,<1.0.0",
-    "wetext>=0.0.4",
-    "x-transformers>=2.11.0,<3.0.0",
-    "diffusers>=0.29.0,<1.0.0",
-]
-
-# GPT-SoVITS: 가장 복잡한 의존성
-# Note: GPT-SoVITS 저장소 클론 필요 (pip install로 설치 안됨)
-# git clone https://github.com/RVC-Boss/GPT-SoVITS.git
+# GPT-SoVITS: RVC-Boss/GPT-SoVITS 공식 requirements.txt 기반
+# Note: GPT-SoVITS 저장소 클론 필요 (vtts setup --engine gptsovits)
 GPTSOVITS_DEPS = [
-    # Transformers (버전 범위 매우 중요!)
-    "transformers>=4.43.0,<4.51.0",
+    # Core ML (GPT-SoVITS 호환)
+    "torch>=2.0.0",  # 버전 제약 없음 (유연)
+    "torchaudio>=2.0.0",
+    
+    # Audio
+    "librosa==0.10.2",  # 정확히 고정
+    
+    # Transformers (중요: 4.50 이하!)
+    "transformers>=4.43.0,<=4.50.0",  # 4.51+ 호환 불가
     "peft>=0.10.0,<0.18.0",
     "sentencepiece>=0.1.99",
     
     # Audio Processing
-    "funasr>=1.0.27,<2.0.0",
+    "funasr==1.0.27",  # 정확히 고정
     "pytorch-lightning>=2.4.0",
     
     # Text Processing (G2P, NLP)
@@ -116,6 +111,56 @@ GPTSOVITS_DEPS = [
     
     # FFmpeg
     "ffmpeg-python>=0.2.0",
+    
+    # Extras
+    "chardet>=4.0.0",
+    "PyYAML>=5.0",
+    "psutil>=5.0.0",
+    "ToJyutping>=0.0.1",
+    "opencc>=1.1.0",
+    "ctranslate2>=4.0.0,<5.0.0",
+    "av>=11.0.0",
+]
+
+# CosyVoice: FunAudioLLM/CosyVoice 공식 requirements.txt 기반
+# ⚠️ 경고: transformers==4.51.3 필요 (GPT-SoVITS와 충돌!)
+# → Docker 사용 강력 권장!
+COSYVOICE_DEPS = [
+    # Core ML (CosyVoice 정확히 고정)
+    "torch==2.3.1",  # 정확히 고정
+    "torchaudio==2.3.1",  # 정확히 고정
+    
+    # Transformers (중요: 4.51.3 필요!)
+    "transformers==4.51.3",  # GPT-SoVITS와 충돌!
+    
+    # Audio
+    "librosa==0.10.2",
+    "soundfile==0.12.1",
+    "pyworld==0.3.4",
+    
+    # ModelScope & Dependencies
+    "modelscope==1.20.0",
+    "HyperPyYAML==1.2.2",
+    "conformer==0.3.2",
+    "wetext==0.0.4",
+    "x-transformers==2.11.24",
+    "diffusers==0.29.0",
+    
+    # ML Tools
+    "lightning==2.2.4",
+    "onnx==1.16.0",
+    "onnxruntime-gpu==1.18.0; sys_platform == 'linux'",
+    "onnxruntime==1.18.0; sys_platform == 'darwin' or sys_platform == 'win32'",
+    
+    # Utilities
+    "hydra-core==1.3.2",
+    "omegaconf==2.3.0",
+    "protobuf==4.25.0",
+    "pyarrow==18.1.0",
+    "networkx==3.1.0",
+    "inflect==7.3.1",
+    "gdown==5.1.0",
+    "wget==3.2.0",
 ]
 
 # ============================================================
@@ -166,23 +211,28 @@ setup(
         # ============================================================
         "supertonic": SUPERTONIC_DEPS,  # 기본 GPU 지원
         "supertonic-cpu": SUPERTONIC_CPU_DEPS,  # CPU 전용
-        "cosyvoice": COSYVOICE_DEPS,
-        "gptsovits": GPTSOVITS_DEPS,
+        "gptsovits": GPTSOVITS_DEPS,  # transformers<=4.50
+        "cosyvoice": COSYVOICE_DEPS,  # transformers==4.51.3
         
         # ============================================================
-        # 조합 엔진
+        # 조합 엔진 (버전 충돌 주의!)
         # ============================================================
         
-        # Supertonic + GPT-SoVITS (호환 보장, 권장 조합!)
+        # Supertonic + GPT-SoVITS (호환 보장! ✅)
         "supertonic-gptsovits": SUPERTONIC_DEPS + GPTSOVITS_DEPS,
         
-        # Supertonic + CosyVoice (비교적 안전)
+        # ⚠️ WARNING: 아래 조합들은 transformers 버전 충돌!
+        # → Docker 사용 강력 권장!
+        
+        # Supertonic + CosyVoice (torch==2.3.1 고정)
         "supertonic-cosyvoice": SUPERTONIC_DEPS + COSYVOICE_DEPS,
         
-        # CosyVoice + GPT-SoVITS (충돌 가능성 - Docker 권장)
+        # CosyVoice + GPT-SoVITS (❌ transformers 충돌! Docker 필수!)
+        # CosyVoice: transformers==4.51.3
+        # GPT-SoVITS: transformers<=4.50
         "cosyvoice-gptsovits": COSYVOICE_DEPS + GPTSOVITS_DEPS,
         
-        # 전체 설치 (충돌 가능 - Docker 강력 권장!)
+        # 전체 설치 (❌ 충돌! Docker 강력 권장!)
         "all": SUPERTONIC_DEPS + COSYVOICE_DEPS + GPTSOVITS_DEPS,
         
         # CUDA 지원 (하위 호환성)
