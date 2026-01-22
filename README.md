@@ -401,11 +401,25 @@ vTTS/
 
 ## 📚 문서
 
+### 시작하기
 - [빠른 시작 가이드](QUICKSTART.md)
+- [설치 가이드](INSTALL.md)
+- [엔진 설정 가이드](ENGINES_SETUP.md)
 - [문제 해결 가이드](TROUBLESHOOTING.md)
 - [Docker 가이드](DOCKER.md)
-- [Kaggle 테스트 노트북](kaggle_test_notebook.ipynb)
-- [예제 코드](examples/)
+
+### 예제 및 테스트
+- [📝 예제 코드](examples/) - [예제 README 보기](examples/README.md)
+- [🧪 테스트 스위트](tests/) - [테스트 README 보기](tests/README.md)
+  - [Kaggle 노트북 (Supertonic)](tests/kaggle/kaggle_supertonic.ipynb)
+  - [Kaggle 노트북 (GPT-SoVITS)](tests/kaggle/kaggle_gptsovits.ipynb)
+  - [Kaggle 노트북 (CosyVoice)](tests/kaggle/kaggle_cosyvoice.ipynb)
+
+### 개발자 문서
+- [📚 개발 문서](docs/) - [문서 README 보기](docs/README.md)
+  - [프로젝트 구조](docs/PROJECT_STRUCTURE.md)
+  - [프로젝트 현황](docs/PROJECT_STATUS.md)
+  - [릴리스 체크리스트](docs/RELEASE_CHECKLIST.md)
 
 ---
 
