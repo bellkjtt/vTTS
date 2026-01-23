@@ -174,11 +174,18 @@ class CosyVoiceEngine(BaseTTSEngine):
         
         try:
             # CosyVoice inference mode 결정
+            # CosyVoice3는 zero-shot만 지원 (참조 오디오 필수)
+            model_class = self.model.__class__.__name__
+            
             if request.reference_audio is not None:
                 # Zero-shot mode (참조 오디오 사용)
                 output_audio = self._synthesize_zero_shot(request)
+            elif model_class == 'CosyVoice3':
+                # CosyVoice3는 SFT 모드 없음 - 기본 프롬프트로 zero-shot 사용
+                logger.info("CosyVoice3 requires reference audio. Using default prompt.")
+                output_audio = self._synthesize_zero_shot_default(request)
             else:
-                # SFT mode (사전 학습된 음성 사용)
+                # CosyVoice v1/v2: SFT mode (사전 학습된 음성 사용)
                 output_audio = self._synthesize_sft(request)
             
             # numpy 배열로 변환
@@ -253,7 +260,14 @@ class CosyVoiceEngine(BaseTTSEngine):
         
         # 참조 오디오 로드
         reference_audio = self._load_reference_audio(request.reference_audio)
+        
+        # CosyVoice3는 특수한 프롬프트 형식 필요
+        # 형식: "You are a helpful assistant.<|endofprompt|>참조 텍스트"
+        model_class = self.model.__class__.__name__
         reference_text = request.reference_text or "참조 음성입니다."
+        
+        if model_class == 'CosyVoice3' and '<|endofprompt|>' not in reference_text:
+            reference_text = f"You are a helpful assistant.<|endofprompt|>{reference_text}"
         
         # 속도 설정
         speed = request.speed if hasattr(request, 'speed') and request.speed else 1.0
@@ -276,6 +290,62 @@ class CosyVoiceEngine(BaseTTSEngine):
         
         if not audio_chunks:
             raise RuntimeError("No audio output from CosyVoice zero-shot mode")
+        
+        # 모든 청크 연결
+        return np.concatenate([chunk.flatten() for chunk in audio_chunks])
+    
+    def _synthesize_zero_shot_default(self, request: TTSRequest) -> np.ndarray:
+        """CosyVoice3용 기본 zero-shot 합성 (기본 프롬프트 사용)"""
+        logger.info("Using CosyVoice3 zero-shot mode with default prompt")
+        
+        # 기본 프롬프트 텍스트 (CosyVoice3 공식 예시)
+        default_prompt_text = "You are a helpful assistant.<|endofprompt|>希望你以后能够做的比我还好呦。"
+        
+        # 기본 프롬프트 오디오 생성 (모델 디렉토리에서 찾거나 생성)
+        import os
+        from huggingface_hub import hf_hub_download
+        
+        # 먼저 모델 디렉토리에서 기본 프롬프트 오디오 찾기
+        model_dir = os.path.dirname(self.model.model_dir) if hasattr(self.model, 'model_dir') else None
+        prompt_wav_path = None
+        
+        # HuggingFace에서 기본 프롬프트 오디오 다운로드 시도
+        try:
+            prompt_wav_path = hf_hub_download(
+                repo_id="FunAudioLLM/CosyVoice-300M",
+                filename="asset/zero_shot_prompt.wav",
+                cache_dir=self.cache_dir
+            )
+            logger.info(f"Downloaded default prompt audio: {prompt_wav_path}")
+        except Exception as e:
+            logger.warning(f"Failed to download default prompt audio: {e}")
+            # 프롬프트 오디오 없이는 CosyVoice3 사용 불가
+            raise RuntimeError(
+                "CosyVoice3 requires reference audio for synthesis. "
+                "Please provide 'reference_audio' and 'reference_text' in your request."
+            )
+        
+        # 속도 설정
+        speed = request.speed if hasattr(request, 'speed') and request.speed else 1.0
+        
+        # inference_zero_shot 호출
+        audio_chunks = []
+        for output in self.model.inference_zero_shot(
+            tts_text=request.text,
+            prompt_text=default_prompt_text,
+            prompt_wav=prompt_wav_path,
+            stream=False,
+            speed=speed
+        ):
+            if isinstance(output, dict) and 'tts_speech' in output:
+                audio = output['tts_speech']
+                if isinstance(audio, torch.Tensor):
+                    audio_chunks.append(audio.cpu().numpy())
+                else:
+                    audio_chunks.append(np.array(audio))
+        
+        if not audio_chunks:
+            raise RuntimeError("No audio output from CosyVoice3 zero-shot mode")
         
         # 모든 청크 연결
         return np.concatenate([chunk.flatten() for chunk in audio_chunks])
