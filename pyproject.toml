@@ -66,9 +66,8 @@ dev = [
 ]
 
 # TTS Engines (선택적 설치)
-supertonic = [
-    "supertonic>=0.1.0",
-]
+# Supertonic - 내장됨! ONNX Runtime만 필요
+supertonic = []
 
 cosyvoice = [
     # Whisper (CosyVoice frontend 필수!)
@@ -99,10 +98,8 @@ gptsovits = [
 
 # All TTS engines
 all = [
-    # Whisper
+    # Whisper (CosyVoice용)
     "openai-whisper>=20231117",
-    # Supertonic
-    "supertonic>=0.1.0",
     # CosyVoice
     "modelscope>=1.9.0",
     "HyperPyYAML>=1.2.0",

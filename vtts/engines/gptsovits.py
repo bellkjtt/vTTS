@@ -1,16 +1,13 @@
-"""GPT-SoVITS v3/v4 TTS Engine
+"""GPT-SoVITS v3/v4 TTS Engine - Embedded Implementation
 
-Zero-shot 및 Few-shot 음성 클로닝을 지원하는 고품질 TTS 엔진.
+GPT-SoVITS 코드가 vtts/engines/_gptsovits/에 내장되어 있어
+별도의 클론이나 설치가 필요 없습니다.
 
 Reference:
 - GitHub: https://github.com/RVC-Boss/GPT-SoVITS
 - HuggingFace: https://huggingface.co/kevinwang676/GPT-SoVITS-v3
 
 Supported Languages: zh (Chinese), en (English), ja (Japanese), ko (Korean), yue (Cantonese)
-
-Requirements:
-- GPT-SoVITS 저장소 클론 필요
-- pip install vtts[gptsovits]
 """
 
 import os
@@ -84,38 +81,10 @@ class GPTSoVITSEngine(BaseTTSEngine):
         self.tts_config = None
         self._gpt_sovits_path = None
         
-    def _setup_gpt_sovits_path(self) -> str:
-        """GPT-SoVITS 경로를 설정합니다."""
-        # 1. 환경변수 확인
-        gpt_sovits_path = os.environ.get("GPT_SOVITS_PATH")
-        
-        if gpt_sovits_path and os.path.exists(gpt_sovits_path):
-            return gpt_sovits_path
-        
-        # 2. 가능한 경로들 확인
-        possible_paths = [
-            # vtts setup으로 설치된 경로 (우선)
-            Path.home() / ".vtts" / "GPT-SoVITS",
-            # 사용자 홈 디렉토리
-            Path.home() / "GPT-SoVITS",
-            # 시스템 경로
-            Path("/opt/GPT-SoVITS"),
-            # 현재 디렉토리
-            Path("GPT-SoVITS"),
-        ]
-        
-        for path in possible_paths:
-            if path.exists():
-                return str(path)
-        
-        raise FileNotFoundError(
-            "GPT-SoVITS not found. Please run:\n\n"
-            "  vtts setup --engine gptsovits\n\n"
-            "Or manually:\n"
-            "  git clone https://github.com/RVC-Boss/GPT-SoVITS.git ~/.vtts/GPT-SoVITS\n"
-            "  cd ~/.vtts/GPT-SoVITS && pip install -r requirements.txt\n"
-            "  export GPT_SOVITS_PATH=~/.vtts/GPT-SoVITS"
-        )
+    def _get_embedded_path(self) -> str:
+        """내장된 GPT-SoVITS 코드 경로를 반환합니다."""
+        # vtts/engines/_gptsovits 경로
+        return str(Path(__file__).parent / "_gptsovits")
     
     def load_model(self) -> None:
         """모델을 로드합니다."""
@@ -127,140 +96,72 @@ class GPTSoVITSEngine(BaseTTSEngine):
         logger.info(f"Version: {self._version}")
         
         try:
-            # GPT-SoVITS 경로 설정
-            self._gpt_sovits_path = self._setup_gpt_sovits_path()
-            logger.info(f"GPT-SoVITS path: {self._gpt_sovits_path}")
+            # 내장된 GPT-SoVITS 코드 경로
+            self._gpt_sovits_path = self._get_embedded_path()
+            logger.info(f"Using embedded GPT-SoVITS: {self._gpt_sovits_path}")
             
-            # Pretrained 모델 경로 (로컬 GPT-SoVITS 저장소 기준)
-            pretrained_dir = os.path.join(
-                self._gpt_sovits_path, "GPT_SoVITS", "pretrained_models"
-            )
-            
-            # HuggingFace에서 pretrained 모델 다운로드 (없는 경우만)
-            if not os.path.exists(os.path.join(pretrained_dir, "s1v3.ckpt")):
-                logger.info(f"Downloading pretrained models from HuggingFace: {self.model_id}")
-                hf_model_path = snapshot_download(
-                    repo_id=self.model_id,
-                    allow_patterns=["GPT_SoVITS/pretrained_models/**"],
-                    cache_dir=None,
-                    resume_download=True
-                )
-                logger.info(f"Models downloaded to HF cache: {hf_model_path}")
-                
-                # HF 캐시에서 로컬 GPT-SoVITS로 복사
-                import shutil
-                hf_pretrained_dir = os.path.join(hf_model_path, "GPT_SoVITS", "pretrained_models")
-                if os.path.exists(hf_pretrained_dir):
-                    logger.info(f"Copying pretrained models to: {pretrained_dir}")
-                    os.makedirs(pretrained_dir, exist_ok=True)
-                    
-                    # 디렉토리 내용 복사
-                    for item in os.listdir(hf_pretrained_dir):
-                        src = os.path.join(hf_pretrained_dir, item)
-                        dst = os.path.join(pretrained_dir, item)
-                        
-                        if os.path.isdir(src):
-                            if os.path.exists(dst):
-                                shutil.rmtree(dst)
-                            shutil.copytree(src, dst)
-                            logger.info(f"  Copied directory: {item}")
-                        else:
-                            shutil.copy2(src, dst)
-                            logger.info(f"  Copied file: {item}")
-                    
-                    logger.info("✅ Pretrained models copied successfully!")
-            else:
-                logger.info(f"Using existing pretrained models: {pretrained_dir}")
-            
-            # fast-langdetect 캐시 디렉토리 생성
-            fast_langdetect_dir = os.path.join(pretrained_dir, "fast_langdetect")
-            os.makedirs(fast_langdetect_dir, exist_ok=True)
-            logger.info(f"Ensured fast-langdetect cache directory: {fast_langdetect_dir}")
-            
-            # sys.path에 추가
+            # sys.path에 내장 경로 추가 (최우선)
             if self._gpt_sovits_path not in sys.path:
                 sys.path.insert(0, self._gpt_sovits_path)
             
-            gpt_sovits_module = os.path.join(self._gpt_sovits_path, "GPT_SoVITS")
-            if gpt_sovits_module not in sys.path:
-                sys.path.insert(0, gpt_sovits_module)
+            # HuggingFace에서 pretrained 모델 다운로드
+            logger.info(f"Downloading pretrained models from HuggingFace: {self.model_id}")
+            hf_model_path = snapshot_download(
+                repo_id=self.model_id,
+                allow_patterns=["GPT_SoVITS/pretrained_models/**"],
+                cache_dir=self.cache_dir,
+                resume_download=True
+            )
+            logger.info(f"Models downloaded to: {hf_model_path}")
             
-            # 현재 디렉토리 변경 (GPT-SoVITS가 상대 경로 사용)
-            original_cwd = os.getcwd()
-            os.chdir(self._gpt_sovits_path)
+            # Pretrained 모델 경로 설정
+            pretrained_dir = os.path.join(hf_model_path, "GPT_SoVITS", "pretrained_models")
             
-            try:
-                # GPT-SoVITS 임포트
-                from TTS_infer_pack.TTS import TTS, TTS_Config
-                
-                # 설정 파일 경로
-                config_path = os.path.join(
-                    self._gpt_sovits_path, 
-                    "GPT_SoVITS", "configs", "tts_infer.yaml"
+            # 디바이스 설정
+            if self.device == "auto":
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            
+            # 내장된 TTS 모듈 import
+            from TTS_infer_pack.TTS import TTS, TTS_Config
+            
+            # 설정 파일 경로 (내장된 configs 사용)
+            config_path = os.path.join(self._gpt_sovits_path, "configs", "tts_infer.yaml")
+            
+            # TTS_Config 초기화
+            self.tts_config = TTS_Config(config_path)
+            self.tts_config.device = self.device
+            self.tts_config.is_half = self.device == "cuda"
+            
+            # 버전별 모델 경로 설정
+            if self._version == "v3":
+                self.tts_config.t2s_weights_path = os.path.join(pretrained_dir, "s1v3.ckpt")
+                self.tts_config.vits_weights_path = os.path.join(pretrained_dir, "s2Gv3.pth")
+                self.tts_config.bert_base_path = os.path.join(pretrained_dir, "chinese-roberta-wwm-ext-large")
+                self.tts_config.cnhuhbert_base_path = os.path.join(pretrained_dir, "chinese-hubert-base")
+            elif self._version == "v4":
+                self.tts_config.t2s_weights_path = os.path.join(pretrained_dir, "s1v3.ckpt")
+                self.tts_config.vits_weights_path = os.path.join(pretrained_dir, "s2Gv4.pth")
+            elif self._version == "v2":
+                self.tts_config.t2s_weights_path = os.path.join(
+                    pretrained_dir, "gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt"
                 )
-                
-                # TTS_Config 초기화
-                self.tts_config = TTS_Config(config_path)
-                
-                # 디바이스 설정
-                if self.device == "auto":
-                    self.device = "cuda" if torch.cuda.is_available() else "cpu"
-                
-                # 버전별 설정
-                self.tts_config.device = self.device
-                self.tts_config.is_half = self.device == "cuda"
-                
-                # 버전별 모델 경로 설정 (로컬 GPT-SoVITS 저장소 기준)
-                if self._version == "v3":
-                    self.tts_config.t2s_weights_path = os.path.join(
-                        pretrained_dir, "s1v3.ckpt"
-                    )
-                    self.tts_config.vits_weights_path = os.path.join(
-                        pretrained_dir, "s2Gv3.pth"
-                    )
-                    # BERT 및 CNHubert 경로 설정
-                    self.tts_config.bert_base_path = os.path.join(
-                        pretrained_dir, "chinese-roberta-wwm-ext-large"
-                    )
-                    self.tts_config.cnhuhbert_base_path = os.path.join(
-                        pretrained_dir, "chinese-hubert-base"
-                    )
-                elif self._version == "v4":
-                    self.tts_config.t2s_weights_path = os.path.join(
-                        pretrained_dir, "s1v3.ckpt"
-                    )
-                    self.tts_config.vits_weights_path = os.path.join(
-                        pretrained_dir, "s2Gv4.pth"
-                    )
-                elif self._version == "v2":
-                    self.tts_config.t2s_weights_path = os.path.join(
-                        pretrained_dir, "gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt"
-                    )
-                    self.tts_config.vits_weights_path = os.path.join(
-                        pretrained_dir, "gsv-v2final-pretrained/s2G2333k.pth"
-                    )
-                
-                # TTS 파이프라인 초기화
-                logger.info("Initializing TTS pipeline...")
-                self.tts_pipeline = TTS(self.tts_config)
-                
-                self.is_loaded = True
-                logger.info(f"Successfully loaded GPT-SoVITS {self._version}")
-                logger.info(f"Device: {self.device}")
-                logger.info(f"Sample rate: {self._sample_rate} Hz")
-                
-            finally:
-                # 원래 디렉토리로 복귀
-                os.chdir(original_cwd)
+                self.tts_config.vits_weights_path = os.path.join(
+                    pretrained_dir, "gsv-v2final-pretrained/s2G2333k.pth"
+                )
+            
+            # TTS 파이프라인 초기화
+            logger.info("Initializing TTS pipeline...")
+            self.tts_pipeline = TTS(self.tts_config)
+            
+            self.is_loaded = True
+            logger.info(f"Successfully loaded GPT-SoVITS {self._version}")
+            logger.info(f"Device: {self.device}")
+            logger.info(f"Sample rate: {self._sample_rate} Hz")
                 
         except ImportError as e:
             logger.error(f"GPT-SoVITS import failed: {e}")
-            raise ImportError(
-                "GPT-SoVITS 패키지를 찾을 수 없습니다.\n"
-                "1. git clone https://github.com/RVC-Boss/GPT-SoVITS.git\n"
-                "2. cd GPT-SoVITS && pip install -r requirements.txt\n"
-                "3. export GPT_SOVITS_PATH=/path/to/GPT-SoVITS"
-            ) from e
+            logger.error(f"Install dependencies: pip install vtts[gptsovits]")
+            raise
         except Exception as e:
             logger.error(f"Failed to load GPT-SoVITS: {e}")
             import traceback
@@ -318,91 +219,83 @@ class GPTSoVITSEngine(BaseTTSEngine):
         logger.info(f"Reference audio: {request.reference_audio}")
         
         try:
-            # 원래 디렉토리 저장
-            original_cwd = os.getcwd()
-            os.chdir(self._gpt_sovits_path)
+            # 참조 오디오 경로 준비
+            ref_audio_path = self._prepare_reference_audio(request.reference_audio)
             
-            try:
-                # 참조 오디오 경로 준비
-                ref_audio_path = self._prepare_reference_audio(request.reference_audio)
-                
-                # 추론 요청 생성
-                inference_req = {
-                    "text": request.text,
-                    "text_lang": text_lang,
-                    "ref_audio_path": ref_audio_path,
-                    "prompt_text": request.reference_text or "",
-                    "prompt_lang": prompt_lang,
-                    "top_k": 15,
-                    "top_p": 1.0,
-                    "temperature": 1.0,
-                    "text_split_method": "cut5",
-                    "batch_size": 1,
-                    "speed_factor": request.speed if request.speed else 1.0,
-                    "fragment_interval": 0.3,
-                    "seed": -1,
-                    "parallel_infer": True,
-                    "repetition_penalty": 1.35,
-                    "sample_steps": 32,  # v3 기본값
-                    "streaming_mode": False,
+            # 추론 요청 생성
+            inference_req = {
+                "text": request.text,
+                "text_lang": text_lang,
+                "ref_audio_path": ref_audio_path,
+                "prompt_text": request.reference_text or "",
+                "prompt_lang": prompt_lang,
+                "top_k": 15,
+                "top_p": 1.0,
+                "temperature": 1.0,
+                "text_split_method": "cut5",
+                "batch_size": 1,
+                "speed_factor": request.speed if request.speed else 1.0,
+                "fragment_interval": 0.3,
+                "seed": -1,
+                "parallel_infer": True,
+                "repetition_penalty": 1.35,
+                "sample_steps": 32,  # v3 기본값
+                "streaming_mode": False,
+            }
+            
+            # extra_params에서 추가 파라미터 가져오기
+            if request.extra_params:
+                for key in [
+                    "top_k", "top_p", "temperature", "sample_steps", "seed",
+                    "repetition_penalty", "text_split_method", "batch_size",
+                    "fragment_interval", "parallel_infer"
+                ]:
+                    if key in request.extra_params:
+                        inference_req[key] = request.extra_params[key]
+            
+            # TTS 추론 실행
+            tts_generator = self.tts_pipeline.run(inference_req)
+            
+            # 결과 수집
+            audio_chunks = []
+            sample_rate = self._sample_rate
+            
+            for sr, chunk in tts_generator:
+                sample_rate = sr
+                audio_chunks.append(chunk)
+            
+            # 청크 합치기
+            if audio_chunks:
+                audio_data = np.concatenate(audio_chunks)
+            else:
+                raise RuntimeError("No audio generated")
+            
+            # float32 변환 및 정규화
+            if audio_data.dtype == np.int16:
+                audio_data = audio_data.astype(np.float32) / 32768.0
+            elif audio_data.dtype != np.float32:
+                audio_data = audio_data.astype(np.float32)
+            
+            # 정규화
+            max_val = np.abs(audio_data).max()
+            if max_val > 1.0:
+                audio_data = audio_data / max_val
+            
+            duration = len(audio_data) / sample_rate
+            logger.info(f"Synthesis complete: {duration:.2f}s audio generated")
+            
+            return TTSOutput(
+                audio=audio_data,
+                sample_rate=sample_rate,
+                metadata={
+                    "model": self.model_id,
+                    "version": self._version,
+                    "language": text_lang,
+                    "reference_audio": str(ref_audio_path),
+                    "duration": duration,
+                    "engine": "gpt-sovits"
                 }
-                
-                # extra_params에서 추가 파라미터 가져오기
-                if request.extra_params:
-                    for key in [
-                        "top_k", "top_p", "temperature", "sample_steps", "seed",
-                        "repetition_penalty", "text_split_method", "batch_size",
-                        "fragment_interval", "parallel_infer"
-                    ]:
-                        if key in request.extra_params:
-                            inference_req[key] = request.extra_params[key]
-                
-                # TTS 추론 실행
-                tts_generator = self.tts_pipeline.run(inference_req)
-                
-                # 결과 수집
-                audio_chunks = []
-                sample_rate = self._sample_rate
-                
-                for sr, chunk in tts_generator:
-                    sample_rate = sr
-                    audio_chunks.append(chunk)
-                
-                # 청크 합치기
-                if audio_chunks:
-                    audio_data = np.concatenate(audio_chunks)
-                else:
-                    raise RuntimeError("No audio generated")
-                
-                # float32 변환 및 정규화
-                if audio_data.dtype == np.int16:
-                    audio_data = audio_data.astype(np.float32) / 32768.0
-                elif audio_data.dtype != np.float32:
-                    audio_data = audio_data.astype(np.float32)
-                
-                # 정규화
-                max_val = np.abs(audio_data).max()
-                if max_val > 1.0:
-                    audio_data = audio_data / max_val
-                
-                duration = len(audio_data) / sample_rate
-                logger.info(f"Synthesis complete: {duration:.2f}s audio generated")
-                
-                return TTSOutput(
-                    audio=audio_data,
-                    sample_rate=sample_rate,
-                    metadata={
-                        "model": self.model_id,
-                        "version": self._version,
-                        "language": text_lang,
-                        "reference_audio": str(ref_audio_path),
-                        "duration": duration,
-                        "engine": "gpt-sovits"
-                    }
-                )
-                
-            finally:
-                os.chdir(original_cwd)
+            )
                 
         except Exception as e:
             logger.error(f"GPT-SoVITS synthesis failed: {e}")
