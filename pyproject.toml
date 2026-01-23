@@ -71,12 +71,16 @@ supertonic = [
 ]
 
 cosyvoice = [
+    # Whisper (CosyVoice frontend 필수!)
+    "openai-whisper>=20231117",
+    # CosyVoice Dependencies
     "modelscope>=1.9.0",
     "HyperPyYAML>=1.2.0",
     "conformer>=0.3.0",
     "wetext>=0.0.4",
     "x-transformers>=2.11.0",
     "diffusers>=0.29.0",
+    "inflect>=7.0.0",
 ]
 
 gptsovits = [
@@ -95,13 +99,19 @@ gptsovits = [
 
 # All TTS engines
 all = [
+    # Whisper
+    "openai-whisper>=20231117",
+    # Supertonic
     "supertonic>=0.1.0",
+    # CosyVoice
     "modelscope>=1.9.0",
     "HyperPyYAML>=1.2.0",
     "conformer>=0.3.0",
     "wetext>=0.0.4",
     "x-transformers>=2.11.0",
     "diffusers>=0.29.0",
+    "inflect>=7.0.0",
+    # GPT-SoVITS
     "funasr>=1.0.27",
     "peft>=0.10.0,<0.18.0",
     "g2p_en",
