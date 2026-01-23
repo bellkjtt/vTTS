@@ -80,6 +80,8 @@ cosyvoice = [
     "x-transformers>=2.11.0",
     "diffusers>=0.29.0",
     "inflect>=7.0.0",
+    "pyarrow>=14.0.0",
+    "einops>=0.6.0",
 ]
 
 gptsovits = [
@@ -108,6 +110,8 @@ all = [
     "x-transformers>=2.11.0",
     "diffusers>=0.29.0",
     "inflect>=7.0.0",
+    "pyarrow>=14.0.0",
+    "einops>=0.6.0",
     # GPT-SoVITS
     "funasr>=1.0.27",
     "peft>=0.10.0,<0.18.0",

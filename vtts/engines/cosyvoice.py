@@ -109,8 +109,9 @@ class CosyVoiceEngine(BaseTTSEngine):
                     alias_name = f'cosyvoice.{submod}'
                     mod = importlib.import_module(full_name)
                     sys.modules[alias_name] = mod
-                except ImportError:
-                    pass  # 일부 모듈은 없을 수 있음
+                    logger.debug(f"Registered: {alias_name}")
+                except ImportError as e:
+                    logger.warning(f"Failed to import {alias_name}: {e}")
             
             # 내장된 CosyVoice 모듈 import
             AutoModel = importlib.import_module(f'{pkg_path}.cli.cosyvoice').AutoModel
