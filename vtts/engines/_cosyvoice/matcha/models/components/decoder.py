@@ -8,7 +8,7 @@ from conformer import ConformerBlock
 from diffusers.models.activations import get_activation
 from einops import pack, rearrange, repeat
 
-from matcha.models.components.transformer import BasicTransformerBlock
+from vtts.engines._cosyvoice.matcha.models.components.transformer import BasicTransformerBlock
 
 
 class SinusoidalPosEmb(torch.nn.Module):

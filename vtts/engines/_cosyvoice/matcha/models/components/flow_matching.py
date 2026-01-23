@@ -3,8 +3,8 @@ from abc import ABC
 import torch
 import torch.nn.functional as F
 
-from matcha.models.components.decoder import Decoder
-from matcha.utils.pylogger import get_pylogger
+from vtts.engines._cosyvoice.matcha.models.components.decoder import Decoder
+from vtts.engines._cosyvoice.matcha.utils.pylogger import get_pylogger
 
 log = get_pylogger(__name__)
 
