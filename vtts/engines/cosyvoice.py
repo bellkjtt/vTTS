@@ -100,6 +100,7 @@ class CosyVoiceEngine(BaseTTSEngine):
                 'transformer', 'transformer.unet',
                 'tokenizer', 'tokenizer.tokenizer',
                 'utils', 'utils.common', 'utils.file_utils',
+                'dataset', 'dataset.processor', 'dataset.dataset',
             ]
             
             for submod in cosyvoice_submodules:
