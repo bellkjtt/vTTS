@@ -320,11 +320,19 @@ class CosyVoiceEngine(BaseTTSEngine):
     
     def _map_voice_to_speaker(self, voice: str) -> str:
         """Voice ID를 CosyVoice speaker ID로 매핑"""
+        available = self.model.list_available_spks()
+        logger.debug(f"Available speakers: {available}")
+        
+        # 사용 가능한 스피커가 없으면 None 반환 (zero-shot 모드 사용)
+        if not available:
+            logger.warning("No preset speakers available, will use zero-shot mode")
+            return None
+        
+        # voice가 없으면 첫 번째 사용 가능한 speaker 사용
         if not voice:
-            return "中文女"
+            return available[0]
         
         # 먼저 사용 가능한 speakers에서 직접 찾기
-        available = self.model.list_available_spks()
         if voice in available:
             return voice
         
@@ -332,7 +340,7 @@ class CosyVoiceEngine(BaseTTSEngine):
         
         # 기본 매핑
         mapping = {
-            "default": "中文女",
+            "default": available[0] if available else None,
             "male": "中文男",
             "female": "中文女",
             "chinese_male": "中文男",
@@ -343,20 +351,20 @@ class CosyVoiceEngine(BaseTTSEngine):
             "japanese_female": "日语女",
             "korean_male": "韩语男",
             "korean_female": "韩语女",
-            "f1": "中文女",
-            "m1": "中文男",
+            "f1": available[0] if available else None,
+            "m1": available[0] if available else None,
         }
         
         # 매핑에서 찾기
-        speaker = mapping.get(voice_lower, "中文女")
+        speaker = mapping.get(voice_lower)
         
         # 해당 speaker가 사용 가능한지 확인
-        if speaker not in available and available:
-            # 첫 번째 사용 가능한 speaker 사용
-            speaker = available[0]
-            logger.warning(f"Speaker '{voice}' not available, using '{speaker}'")
+        if speaker and speaker in available:
+            return speaker
         
-        return speaker
+        # 없으면 첫 번째 사용 가능한 speaker 사용
+        logger.warning(f"Speaker '{voice}' not available, using '{available[0]}'")
+        return available[0]
     
     @property
     def supported_languages(self) -> List[str]:
