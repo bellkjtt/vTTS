@@ -61,6 +61,35 @@ class CosyVoiceEngine(BaseTTSEngine):
         logger.info(f"Loading CosyVoice model: {self.model_id}")
         
         try:
+            # sys.modules에 cosyvoice alias 등록
+            # HuggingFace 모델의 YAML이 'cosyvoice.xxx' 경로를 사용하므로 필요
+            import sys
+            import importlib
+            from vtts.engines import _cosyvoice
+            
+            # 최상위 모듈 등록
+            sys.modules['cosyvoice'] = _cosyvoice
+            
+            # 필요한 하위 모듈들을 명시적으로 import하고 등록
+            submodules = [
+                'cli', 'cli.cosyvoice', 'cli.frontend', 'cli.model',
+                'llm', 'llm.llm',
+                'flow', 'flow.flow', 'flow.flow_matching',
+                'hifigan', 'hifigan.generator',
+                'transformer', 'transformer.unet',
+                'tokenizer', 'tokenizer.tokenizer',
+                'utils', 'utils.common', 'utils.file_utils',
+            ]
+            
+            for submod in submodules:
+                try:
+                    full_name = f'vtts.engines._cosyvoice.{submod}'
+                    alias_name = f'cosyvoice.{submod}'
+                    mod = importlib.import_module(full_name)
+                    sys.modules[alias_name] = mod
+                except ImportError:
+                    pass  # 일부 모듈은 없을 수 있음
+            
             # 내장된 CosyVoice 모듈 import
             from vtts.engines._cosyvoice.cli.cosyvoice import AutoModel
             
