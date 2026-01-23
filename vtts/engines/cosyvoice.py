@@ -61,17 +61,32 @@ class CosyVoiceEngine(BaseTTSEngine):
         logger.info(f"Loading CosyVoice model: {self.model_id}")
         
         try:
-            # sys.modules에 cosyvoice alias 등록
+            # sys.modules에 cosyvoice 및 matcha alias 등록
             # HuggingFace 모델의 YAML이 'cosyvoice.xxx' 경로를 사용하므로 필요
             import sys
             import importlib
             from vtts.engines import _cosyvoice
+            from vtts.engines._cosyvoice import matcha as _matcha
             
             # 최상위 모듈 등록
             sys.modules['cosyvoice'] = _cosyvoice
+            sys.modules['matcha'] = _matcha
             
-            # 필요한 하위 모듈들을 명시적으로 import하고 등록
-            submodules = [
+            # matcha 하위 모듈 등록
+            matcha_submodules = [
+                'models', 'models.components', 'models.components.flow_matching',
+            ]
+            for submod in matcha_submodules:
+                try:
+                    full_name = f'vtts.engines._cosyvoice.matcha.{submod}'
+                    alias_name = f'matcha.{submod}'
+                    mod = importlib.import_module(full_name)
+                    sys.modules[alias_name] = mod
+                except ImportError as e:
+                    logger.debug(f"Failed to import matcha.{submod}: {e}")
+            
+            # cosyvoice 하위 모듈 등록
+            cosyvoice_submodules = [
                 'cli', 'cli.cosyvoice', 'cli.frontend', 'cli.model',
                 'llm', 'llm.llm',
                 'flow', 'flow.flow', 'flow.flow_matching',
@@ -81,7 +96,7 @@ class CosyVoiceEngine(BaseTTSEngine):
                 'utils', 'utils.common', 'utils.file_utils',
             ]
             
-            for submod in submodules:
+            for submod in cosyvoice_submodules:
                 try:
                     full_name = f'vtts.engines._cosyvoice.{submod}'
                     alias_name = f'cosyvoice.{submod}'
