@@ -11,16 +11,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Dataset processor for CosyVoice training.
+Note: This module is for training only. Inference does not require these functions.
+Heavy dependencies (pyarrow, pyworld) are lazy-loaded to avoid import errors during inference.
+"""
 import logging
 import random
-
-import pyarrow.parquet as pq
 from io import BytesIO
+
 import torch
 import torchaudio
 from torch.nn.utils.rnn import pad_sequence
 import torch.nn.functional as F
-import pyworld as pw
+
+# Lazy imports for training-only dependencies
+pq = None
+pw = None
+
+def _ensure_pyarrow():
+    global pq
+    if pq is None:
+        import pyarrow.parquet as _pq
+        pq = _pq
+    return pq
+
+def _ensure_pyworld():
+    global pw
+    if pw is None:
+        import pyworld as _pw
+        pw = _pw
+    return pw
 
 
 AUDIO_FORMAT_SETS = {'flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'}
@@ -40,7 +60,8 @@ def parquet_opener(data, mode='train'):
         assert 'src' in sample
         url = sample['src']
         try:
-            for df in pq.ParquetFile(url).iter_batches(batch_size=64):
+            _pq = _ensure_pyarrow()
+            for df in _pq.ParquetFile(url).iter_batches(batch_size=64):
                 df = df.to_pandas()
                 for i in range(len(df)):
                     sample.update(dict(df.loc[i]))
@@ -197,10 +218,11 @@ def compute_f0(data, sample_rate, hop_size, mode='train'):
         assert 'utt' in sample
         assert 'text_token' in sample
         waveform = sample['speech']
-        _f0, t = pw.harvest(waveform.squeeze(dim=0).numpy().astype('double'), sample_rate, frame_period=frame_period)
+        _pw = _ensure_pyworld()
+        _f0, t = _pw.harvest(waveform.squeeze(dim=0).numpy().astype('double'), sample_rate, frame_period=frame_period)
         if sum(_f0 != 0) < 5:  # this happens when the algorithm fails
-            _f0, t = pw.dio(waveform.squeeze(dim=0).numpy().astype('double'), sample_rate, frame_period=frame_period)  # if harvest fails, try dio
-        f0 = pw.stonemask(waveform.squeeze(dim=0).numpy().astype('double'), _f0, t, sample_rate)
+            _f0, t = _pw.dio(waveform.squeeze(dim=0).numpy().astype('double'), sample_rate, frame_period=frame_period)  # if harvest fails, try dio
+        f0 = _pw.stonemask(waveform.squeeze(dim=0).numpy().astype('double'), _f0, t, sample_rate)
         f0 = F.interpolate(torch.from_numpy(f0).view(1, 1, -1), size=sample['speech_feat'].shape[0], mode='linear').view(-1)
         sample['pitch_feat'] = f0
         yield sample
