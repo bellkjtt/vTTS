@@ -65,8 +65,12 @@ class CosyVoiceEngine(BaseTTSEngine):
             # HuggingFace 모델의 YAML이 'cosyvoice.xxx' 경로를 사용하므로 필요
             import sys
             import importlib
-            from vtts.engines import _cosyvoice
-            from vtts.engines._cosyvoice import matcha as _matcha
+            
+            pkg_path = 'vtts.engines._cosyvoice'
+            
+            # _cosyvoice 모듈 동적 import (circular import 방지)
+            _cosyvoice = importlib.import_module(pkg_path)
+            _matcha = importlib.import_module(f'{pkg_path}.matcha')
             
             # 최상위 모듈 등록
             sys.modules['cosyvoice'] = _cosyvoice
@@ -75,10 +79,12 @@ class CosyVoiceEngine(BaseTTSEngine):
             # matcha 하위 모듈 등록
             matcha_submodules = [
                 'models', 'models.components', 'models.components.flow_matching',
+                'models.components.decoder', 'models.components.transformer',
+                'hifigan', 'hifigan.models', 'hifigan.xutils',
             ]
             for submod in matcha_submodules:
                 try:
-                    full_name = f'vtts.engines._cosyvoice.matcha.{submod}'
+                    full_name = f'{pkg_path}.matcha.{submod}'
                     alias_name = f'matcha.{submod}'
                     mod = importlib.import_module(full_name)
                     sys.modules[alias_name] = mod
@@ -98,7 +104,7 @@ class CosyVoiceEngine(BaseTTSEngine):
             
             for submod in cosyvoice_submodules:
                 try:
-                    full_name = f'vtts.engines._cosyvoice.{submod}'
+                    full_name = f'{pkg_path}.{submod}'
                     alias_name = f'cosyvoice.{submod}'
                     mod = importlib.import_module(full_name)
                     sys.modules[alias_name] = mod
@@ -106,7 +112,7 @@ class CosyVoiceEngine(BaseTTSEngine):
                     pass  # 일부 모듈은 없을 수 있음
             
             # 내장된 CosyVoice 모듈 import
-            from vtts.engines._cosyvoice.cli.cosyvoice import AutoModel
+            AutoModel = importlib.import_module(f'{pkg_path}.cli.cosyvoice').AutoModel
             
             # HuggingFace에서 모델 다운로드
             logger.info(f"Downloading model from HuggingFace: {self.model_id}")
