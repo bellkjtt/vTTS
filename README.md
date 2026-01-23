@@ -87,32 +87,17 @@ vtts serve kevinwang676/GPT-SoVITS-v3 --port 8002 --device cuda
 
 > **Supertonic + GPT-SoVITS는 같이 설치해도 충돌하지 않습니다!**
 
-#### 옵션 3: CosyVoice만 (uv 필수!)
+#### 옵션 3: CosyVoice만 (2줄!)
 
 ```bash
-# 1. CosyVoice 설치 (uv 사용 - pip로는 의존성 충돌!)
-uv pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git" --system
+# 1. vTTS + CosyVoice 의존성 설치 (CosyVoice 코드 내장!)
+pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# 2. CosyVoice 저장소 자동 클론
-vtts setup --engine cosyvoice
-
-# 3. 서버 실행
-vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda
+# 2. 서버 실행 (모델 자동 다운로드!)
+vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda --port 8001
 ```
 
-> **CosyVoice는 의존성이 복잡합니다. `uv` 사용 또는 Docker 권장!**
-
-<details>
-<summary><b>기존 pip 사용 (권장하지 않음)</b></summary>
-
-```bash
-# pip로도 가능하지만 의존성 충돌 가능성이 높습니다
-pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
-
-# CosyVoice는 pip로 설치 시 높은 확률로 실패합니다!
-```
-
-</details>
+> **CosyVoice 코드가 vTTS에 내장되어 별도 클론이 필요 없습니다!**
 
 ### Docker (여러 엔진 동시 사용)
 
@@ -131,13 +116,15 @@ docker-compose --profile gateway up -d  # :8000 (통합 엔드포인트)
 ### CLI 자동 설치
 
 ```bash
-# 기본 설치
-pip install git+https://github.com/bellkjtt/vTTS.git
+# 기본 설치 (Supertonic만)
+pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# 엔진별 자동 설치 (저장소 클론 + 의존성)
-vtts setup --engine supertonic           # Supertonic만
-vtts setup --engine gptsovits            # GPT-SoVITS (저장소 자동 클론)
-vtts setup --engine cosyvoice            # CosyVoice (저장소 자동 클론)
+# CosyVoice (코드 내장!)
+pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# GPT-SoVITS (저장소 클론 필요)
+pip install "vtts[gptsovits] @ git+https://github.com/bellkjtt/vTTS.git"
+vtts setup --engine gptsovits            # GPT-SoVITS 저장소 자동 클론
 ```
 
 ---
@@ -174,10 +161,14 @@ vTTS Environment Diagnosis
 
 ### Kaggle/Colab에서
 
-```python
-# 설치 + 환경 자동 설정
-!pip install -q git+https://github.com/bellkjtt/vTTS.git
-!vtts doctor --fix --cuda
+```bash
+# Supertonic (가장 간단!)
+!pip install "vtts[supertonic] @ git+https://github.com/bellkjtt/vTTS.git"
+!vtts serve Supertone/supertonic-2 --device cuda &
+
+# CosyVoice (2줄!)
+!pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
+!vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda &
 ```
 
 ---
@@ -193,14 +184,15 @@ vtts serve Supertone/supertonic-2 --device cuda --port 8000
 ### CosyVoice (다국어 음성 클로닝)
 
 ```bash
-# CosyVoice 저장소 설치 (자동 클론 + 의존성 설치)
-vtts setup --engine cosyvoice
+# 1. vTTS + CosyVoice 의존성 설치 (한 줄!)
+pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
 
-# 서버 실행 (모델 자동 다운로드됨!)
+# 2. 서버 실행 (모델 자동 다운로드!)
 vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda --port 8001
 ```
 
 **참고:**
+- CosyVoice 코드가 **vTTS에 내장**되어 있어 별도 클론 불필요!
 - 첫 실행 시 HuggingFace에서 **자동으로 모델을 다운로드**합니다 (~2 GB)
 - **9개 언어** 지원: 한국어, 영어, 중국어, 일본어, 광동어, 스페인어, 프랑스어, 독일어, 포르투갈어
 - **18+ 중국어 방언** 지원
