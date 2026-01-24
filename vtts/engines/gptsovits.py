@@ -309,18 +309,84 @@ class GPTSoVITSEngine(BaseTTSEngine):
             raise RuntimeError(f"GPT-SoVITS synthesis failed: {e}") from e
     
     def _prepare_reference_audio(self, reference: Union[str, Path, bytes], ref_text: Optional[str] = None) -> str:
-        """참조 오디오를 준비합니다. (캐시 사용)"""
+        """참조 오디오를 준비합니다. (캐시 사용)
+        
+        지원하는 입력 형식:
+        - 파일 경로 (str, Path)
+        - base64 인코딩 데이터 (raw base64 또는 data:audio/* 형식)
+        - bytes 데이터
+        """
         import soundfile as sf
         import base64
         
+        # 캐시 키 생성 (base64인 경우 처음 100자만 사용)
+        cache_key = reference[:100] if isinstance(reference, str) and len(reference) > 100 else reference
+        
         # 캐시된 임시 파일 경로 확인
-        cached_features = self.ref_cache.get_features(reference, ref_text)
+        cached_features = self.ref_cache.get_features(cache_key, ref_text)
         if cached_features and isinstance(cached_features, str) and os.path.exists(cached_features):
             logger.info(f"Using cached reference audio: {cached_features}")
             return cached_features
         
         if isinstance(reference, (str, Path)):
-            path = Path(reference)
+            ref_str = str(reference)
+            
+            # base64 인코딩 데이터 감지 (data:audio/* 형식)
+            if ref_str.startswith("data:audio"):
+                try:
+                    header, data = ref_str.split(",", 1)
+                    audio_bytes = base64.b64decode(data)
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+                    temp_file.write(audio_bytes)
+                    temp_file.close()
+                    logger.info(f"Decoded data:audio base64 to: {temp_file.name}")
+                    self.ref_cache.set_features(cache_key, temp_file.name, ref_text)
+                    return temp_file.name
+                except Exception as e:
+                    logger.error(f"Failed to decode data:audio base64: {e}")
+                    raise
+            
+            # raw base64 데이터 감지 (파일 경로가 아닌 긴 문자열)
+            # base64 문자열은 보통 100자 이상이고 / 또는 \ 없이 시작
+            if len(ref_str) > 100 and not os.path.sep in ref_str[:50]:
+                try:
+                    # base64 디코딩 시도
+                    audio_bytes = base64.b64decode(ref_str)
+                    
+                    # 디코딩된 데이터가 오디오인지 확인 (매직 바이트)
+                    # MP3: ID3 (0x49 0x44 0x33) 또는 0xFF 0xFB
+                    # WAV: RIFF (0x52 0x49 0x46 0x46)
+                    # OGG: OggS (0x4F 0x67 0x67 0x53)
+                    if (audio_bytes[:3] == b'ID3' or 
+                        audio_bytes[:2] == b'\xff\xfb' or
+                        audio_bytes[:4] == b'RIFF' or
+                        audio_bytes[:4] == b'OggS' or
+                        audio_bytes[:4] == b'fLaC'):
+                        
+                        # 확장자 결정
+                        if audio_bytes[:3] == b'ID3' or audio_bytes[:2] == b'\xff\xfb':
+                            suffix = ".mp3"
+                        elif audio_bytes[:4] == b'RIFF':
+                            suffix = ".wav"
+                        elif audio_bytes[:4] == b'OggS':
+                            suffix = ".ogg"
+                        elif audio_bytes[:4] == b'fLaC':
+                            suffix = ".flac"
+                        else:
+                            suffix = ".wav"
+                        
+                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                        temp_file.write(audio_bytes)
+                        temp_file.close()
+                        logger.info(f"Decoded raw base64 audio to: {temp_file.name} ({len(audio_bytes)} bytes)")
+                        self.ref_cache.set_features(cache_key, temp_file.name, ref_text)
+                        return temp_file.name
+                except Exception as e:
+                    # base64 디코딩 실패 시 파일 경로로 시도
+                    logger.debug(f"Not base64 data, trying as file path: {e}")
+            
+            # 파일 경로로 처리
+            path = Path(ref_str)
             
             # 상대 경로인 경우 절대 경로로 변환
             if not path.is_absolute():
@@ -328,24 +394,10 @@ class GPTSoVITSEngine(BaseTTSEngine):
                 logger.info(f"Resolved relative path to: {path}")
             
             if path.exists():
-                logger.info(f"Using reference audio: {path}")
+                logger.info(f"Using reference audio file: {path}")
                 ref_path = str(path.absolute())
-                # 캐시에 저장
-                self.ref_cache.set_features(reference, ref_path, ref_text)
+                self.ref_cache.set_features(cache_key, ref_path, ref_text)
                 return ref_path
-            
-            # base64 인코딩된 데이터인지 확인
-            if isinstance(reference, str) and reference.startswith("data:audio"):
-                header, data = reference.split(",", 1)
-                audio_bytes = base64.b64decode(data)
-                
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-                temp_file.write(audio_bytes)
-                temp_file.close()
-                logger.info(f"Decoded base64 audio to: {temp_file.name}")
-                # 캐시에 저장
-                self.ref_cache.set_features(reference, temp_file.name, ref_text)
-                return temp_file.name
             
             raise FileNotFoundError(f"Reference audio not found: {reference} (resolved to: {path})")
         
@@ -353,8 +405,8 @@ class GPTSoVITSEngine(BaseTTSEngine):
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
             temp_file.write(reference)
             temp_file.close()
-            # 캐시에 저장
-            self.ref_cache.set_features(reference, temp_file.name, ref_text)
+            logger.info(f"Saved bytes to: {temp_file.name}")
+            self.ref_cache.set_features(cache_key, temp_file.name, ref_text)
             return temp_file.name
         
         else:

@@ -7,6 +7,26 @@ CosyVoice 코드가 vtts/engines/_cosyvoice/에 내장되어 있어
 from pathlib import Path
 from typing import List, Optional, Union
 import os
+import sys
+
+# xformers 호환성 문제 해결
+def _disable_xformers():
+    """xformers 관련 환경 설정."""
+    try:
+        # 환경 변수로 xformers 비활성화
+        os.environ["XFORMERS_DISABLED"] = "1"
+        os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
+        os.environ["DIFFUSERS_NO_MEMORY_EFFICIENT_ATTENTION"] = "1"
+        
+        # 이미 import된 호환되지 않는 xformers 모듈 제거
+        modules_to_remove = [k for k in list(sys.modules.keys()) if 'xformers' in k]
+        for mod in modules_to_remove:
+            sys.modules.pop(mod, None)
+            
+    except Exception:
+        pass
+
+_disable_xformers()
 
 import numpy as np
 import torch

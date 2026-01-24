@@ -33,16 +33,16 @@ dependencies = [
     "loguru>=0.7.0",
     
     # ML & Audio Processing
-    "torch>=2.0.0",
-    "torchaudio>=2.0.0",
-    "numpy>=1.24.0",
+    "torch>=2.6.0",  # transformers 보안 패치 요구사항
+    "torchaudio>=2.6.0",
+    "numpy>=1.24.0,<2.0.0",  # numpy 2.x 호환성 문제 방지
     "soundfile>=0.12.0",
     "librosa>=0.10.0",
     "pydub>=0.25.0",
     
     # HuggingFace
     "huggingface-hub>=0.20.0",
-    "transformers>=4.30.0",
+    "transformers>=4.45.0",  # 최소 버전
     
     # ONNX Runtime
     "onnxruntime-gpu>=1.17.0; platform_machine == 'x86_64'",
@@ -82,6 +82,7 @@ cosyvoice = [
     "inflect>=7.0.0",
     "pyarrow>=14.0.0",
     "einops>=0.6.0",
+    "matplotlib>=3.5.0",  # hifigan 의존성
 ]
 
 gptsovits = [
@@ -90,6 +91,7 @@ gptsovits = [
     "peft>=0.10.0,<0.18.0",
     "ffmpeg-python",
     "torchcodec",
+    "pytorch_lightning>=2.0.0",  # AR 모델 의존성
     
     # f5_tts (v3) dependencies
     "x_transformers",
@@ -119,7 +121,11 @@ gptsovits = [
 
 # Qwen3-TTS - Alibaba's latest TTS model
 qwen3tts = [
-    "qwen-tts",
+    "qwen-tts>=0.0.5",
+    "transformers>=4.57.0",  # Qwen3-TTS 요구사항
+    "accelerate>=1.0.0",
+    "einops>=0.6.0",
+    "sox>=1.4.0",
 ]
 
 # All TTS engines
@@ -136,11 +142,13 @@ all = [
     "inflect>=7.0.0",
     "pyarrow>=14.0.0",
     "einops>=0.6.0",
+    "matplotlib>=3.5.0",  # hifigan 의존성
     # GPT-SoVITS (Core)
     "funasr>=1.0.27",
     "peft>=0.10.0,<0.18.0",
     "ffmpeg-python",
     "torchcodec",
+    "pytorch_lightning>=2.0.0",  # AR 모델 의존성
     # GPT-SoVITS (f5_tts v3)
     "x_transformers",
     "rotary_embedding_torch",
