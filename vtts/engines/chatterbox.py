@@ -95,6 +95,31 @@ class ChatterboxEngine(BaseTTSEngine):
         
         self.model = None
         
+    def _ensure_chatterbox_installed(self) -> None:
+        """chatterbox-tts 패키지가 설치되어 있는지 확인하고, 없으면 --no-deps로 설치합니다."""
+        try:
+            import chatterbox
+        except ImportError:
+            logger.info("chatterbox-tts not found, installing with --no-deps...")
+            import subprocess
+            import sys
+            
+            # --no-deps로 설치하여 transformers 버전 충돌 우회
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "chatterbox-tts", "--no-deps", "-q"],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"Failed to install chatterbox-tts: {result.stderr}")
+                raise ImportError(
+                    "Failed to install chatterbox-tts. "
+                    "Try manually: pip install chatterbox-tts --no-deps"
+                )
+            
+            logger.info("chatterbox-tts installed successfully (--no-deps)")
+    
     def load_model(self) -> None:
         """모델을 로드합니다."""
         if self.is_loaded:
@@ -103,6 +128,9 @@ class ChatterboxEngine(BaseTTSEngine):
         
         logger.info(f"Loading Chatterbox model: {self.model_id}")
         logger.info(f"Model type: {self._model_type}")
+        
+        # chatterbox-tts 패키지 확인 및 자동 설치
+        self._ensure_chatterbox_installed()
         
         try:
             # 디바이스 설정
@@ -133,9 +161,9 @@ class ChatterboxEngine(BaseTTSEngine):
             
         except ImportError as e:
             logger.error(f"Chatterbox import failed: {e}")
-            logger.error("Install with: pip install chatterbox-tts")
+            logger.error("Install with: pip install chatterbox-tts --no-deps")
             raise ImportError(
-                "chatterbox-tts package not found. Install with: pip install chatterbox-tts"
+                "chatterbox-tts package not found. Install with: pip install chatterbox-tts --no-deps"
             )
         except Exception as e:
             logger.error(f"Failed to load Chatterbox: {e}")

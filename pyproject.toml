@@ -126,10 +126,17 @@ qwen3tts = [
     "sox>=1.4.0",
 ]
 
-# Chatterbox - Resemble AI's SoTA TTS (transformers 충돌 주의!)
-# 설치 후 transformers 업그레이드 필요: pip install transformers>=4.57.0
+# Chatterbox - Resemble AI's SoTA TTS
+# chatterbox-tts는 --no-deps로 자동 설치됨 (transformers 충돌 우회)
 chatterbox = [
-    "chatterbox-tts>=0.1.0",
+    "s3tokenizer>=0.3.0",
+    "diffusers>=0.29.0",
+    "resemble-perth>=1.0.0",
+    "conformer>=0.3.0",
+    "spacy-pkuseg",
+    "pykakasi>=2.3.0",
+    "pyloudnorm",
+    "omegaconf",
 ]
 
 # KaniTTS - High-speed conversational TTS (nemo-toolkit 별도 설치 필요!)
@@ -140,7 +147,8 @@ kanitts = [
     "lhotse>=1.31.0",
 ]
 
-# All TTS engines (Chatterbox, KaniTTS 제외 - 의존성 충돌)
+# All TTS engines (KaniTTS 제외 - nemo-toolkit 대용량)
+# chatterbox-tts는 엔진 로드 시 --no-deps로 자동 설치됨
 all = [
     # Whisper (CosyVoice용)
     "openai-whisper>=20231117",
@@ -183,6 +191,13 @@ all = [
     "qwen-tts>=0.0.5",
     "accelerate>=1.0.0",
     "sox>=1.4.0",
+    # Chatterbox (의존성만, chatterbox-tts는 엔진에서 --no-deps로 자동 설치)
+    "s3tokenizer>=0.3.0",
+    "resemble-perth>=1.0.0",
+    "spacy-pkuseg",
+    "pykakasi>=2.3.0",
+    "pyloudnorm",
+    "omegaconf",
 ]
 
 [project.scripts]
