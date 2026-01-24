@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0--beta-orange.svg)](https://github.com/bellkjtt/vTTS/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/bellkjtt)](https://github.com/sponsors/bellkjtt)
 [![Status](https://img.shields.io/badge/status-beta-yellow.svg)](https://github.com/bellkjtt/vTTS)
 
@@ -73,15 +73,14 @@
 
 ## 빠른 시작
 
-> **CRITICAL - 버전 충돌 경고!**  
-> - **CosyVoice**: `transformers==4.51.3`, `torch==2.3.1` (정확히 고정)
-> - **GPT-SoVITS**: `transformers<=4.50`, `torch` 제약 없음  
-> - **충돌**: CosyVoice와 GPT-SoVITS는 **동일 환경에 설치 불가!**
+> **✅ 통합 환경 지원 (v0.1.0+)**  
+> - **Python 3.11** + **transformers 4.57.1** 환경에서 모든 엔진 호환
+> - Supertonic, Qwen3-TTS, GPT-SoVITS, CosyVoice, Chatterbox가 **하나의 환경에서 동작**
+> - KaniTTS는 nemo-toolkit 대용량 의존성으로 별도 설치 권장
 > 
 > **권장 설치 방법:**
-> 1. **Supertonic 단독**: 충돌 없음, 가장 가벼움
-> 2. **Supertonic + GPT-SoVITS**: 호환 보장 (추천!)
-> 3. **여러 엔진 동시 사용**: Docker 필수!
+> 1. Python 3.11 환경 생성: `conda create -n vtts python=3.11 -y`
+> 2. vTTS 설치: `pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"`
 
 ### 로컬 설치 (uv 권장 - 빠르고 정확함!)
 

@@ -62,11 +62,11 @@ vtts serve FunAudioLLM/CosyVoice2-0.5B --port 8000
 - **Arabic**: karim, nur
 - **Spanish**: maria
 
-> ⚠️ **KaniTTS 설치 요구사항**:
-> - Python **3.11** 필수 (conda 별도 환경 권장)
+> ⚠️ **vTTS 환경 요구사항** (v0.1.0+):
+> - **Python 3.11** 필수
+> - `transformers==4.57.1` (모든 엔진 통합 호환)
 > - `torch>=2.6.0` (보안 패치)
-> - `transformers==4.57.1` (LFM2 호환)
-> - `nemo-toolkit` (대용량 의존성)
+> - KaniTTS는 `nemo-toolkit` 대용량 의존성으로 별도 설치 권장
 
 ---
 

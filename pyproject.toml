@@ -6,14 +6,13 @@ authors = [
     {name = "vTTS Contributors"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 keywords = ["tts", "text-to-speech", "serving", "huggingface", "ai"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
@@ -42,7 +41,7 @@ dependencies = [
     
     # HuggingFace
     "huggingface-hub>=0.20.0",
-    "transformers>=4.45.0",  # 최소 버전
+    "transformers==4.57.1",  # 모든 엔진 호환 버전
     
     # ONNX Runtime
     "onnxruntime-gpu>=1.17.0; platform_machine == 'x86_64'",
@@ -119,10 +118,9 @@ gptsovits = [
     "opencc",
 ]
 
-# Qwen3-TTS - Alibaba's latest TTS model
+# Qwen3-TTS - Alibaba's latest TTS model (패치 자동 적용됨)
 qwen3tts = [
     "qwen-tts>=0.0.5",
-    "transformers>=4.57.0",  # Qwen3-TTS 요구사항
     "accelerate>=1.0.0",
     "einops>=0.6.0",
     "sox>=1.4.0",
@@ -131,15 +129,21 @@ qwen3tts = [
 # Chatterbox - Resemble AI's SoTA TTS
 chatterbox = [
     "chatterbox-tts>=0.1.0",
+    "resemble-perth>=1.0.0",  # watermarker 의존성
+    "s3tokenizer>=0.3.0",
+    "conformer>=0.3.0",
+    "diffusers>=0.29.0",
 ]
 
-# KaniTTS - High-speed conversational TTS
+# KaniTTS - High-speed conversational TTS (nemo-toolkit 별도 설치 필요!)
 kanitts = [
     "kani-tts>=0.1.0",
-    "transformers>=4.57.0",  # LFM2 요구사항
+    "nemo-toolkit[tts]>=2.1.0",
+    "lightning>=2.4.0",
+    "lhotse>=1.31.0",
 ]
 
-# All TTS engines
+# All TTS engines (KaniTTS 제외 - nemo-toolkit 대용량)
 all = [
     # Whisper (CosyVoice용)
     "openai-whisper>=20231117",
@@ -153,13 +157,12 @@ all = [
     "inflect>=7.0.0",
     "pyarrow>=14.0.0",
     "einops>=0.6.0",
-    "matplotlib>=3.5.0",  # hifigan 의존성
+    "matplotlib>=3.5.0",
     # GPT-SoVITS (Core)
     "funasr>=1.0.27",
     "peft>=0.10.0,<0.18.0",
     "ffmpeg-python",
-    "torchcodec",
-    "pytorch_lightning>=2.0.0",  # AR 모델 의존성
+    "pytorch_lightning>=2.0.0",
     # GPT-SoVITS (f5_tts v3)
     "x_transformers",
     "rotary_embedding_torch",
@@ -179,12 +182,14 @@ all = [
     "python-mecab-ko; sys_platform != 'win32'",
     "ToJyutping",
     "opencc",
-    # Qwen3-TTS
-    "qwen-tts",
+    # Qwen3-TTS (패치 자동 적용됨)
+    "qwen-tts>=0.0.5",
+    "accelerate>=1.0.0",
+    "sox>=1.4.0",
     # Chatterbox
     "chatterbox-tts>=0.1.0",
-    # KaniTTS
-    "kani-tts>=0.1.0",
+    "resemble-perth>=1.0.0",
+    "s3tokenizer>=0.3.0",
 ]
 
 [project.scripts]
@@ -205,14 +210,14 @@ include = ["vtts*"]
 
 [tool.black]
 line-length = 120
-target-version = ['py310']
+target-version = ['py311']
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

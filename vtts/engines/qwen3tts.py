@@ -78,10 +78,45 @@ class Qwen3TTSEngine(BaseTTSEngine):
             # 기본값은 CustomVoice
             return "CustomVoice"
     
+    def _patch_qwen_tts(self) -> None:
+        """qwen-tts 패키지의 transformers 4.57+ 호환성 패치 적용"""
+        try:
+            import qwen_tts
+            import os
+            
+            # 패치 대상 파일
+            pkg_dir = os.path.dirname(qwen_tts.__file__)
+            target_file = os.path.join(
+                pkg_dir, "core", "tokenizer_12hz", 
+                "modeling_qwen3_tts_tokenizer_v2.py"
+            )
+            
+            if not os.path.exists(target_file):
+                return
+            
+            # 파일 읽기
+            with open(target_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # @check_model_inputs() -> @check_model_inputs 패치
+            if "@check_model_inputs()" in content:
+                patched_content = content.replace(
+                    "@check_model_inputs()", 
+                    "@check_model_inputs"
+                )
+                with open(target_file, "w", encoding="utf-8") as f:
+                    f.write(patched_content)
+                logger.info("Applied qwen-tts patch for transformers 4.57+ compatibility")
+        except Exception as e:
+            logger.debug(f"qwen-tts patch skipped: {e}")
+    
     def load_model(self) -> None:
         """Qwen3-TTS 모델 로드"""
         logger.info(f"Loading Qwen3-TTS model: {self.model_id}")
         logger.info(f"Model type: {self.model_type}")
+        
+        # transformers 4.57+ 호환성 패치 적용
+        self._patch_qwen_tts()
         
         try:
             from qwen_tts import Qwen3TTSModel
