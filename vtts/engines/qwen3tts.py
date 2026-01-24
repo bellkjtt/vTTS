@@ -262,11 +262,19 @@ class Qwen3TTSEngine(BaseTTSEngine):
             # reference_audio 로드
             audio_data, audio_sr = self.ref_cache.load_audio(ref_audio, ref_text)
             
-            # voice_clone_prompt 생성
-            voice_clone_prompt = self.model.create_voice_clone_prompt(
-                ref_audio=(audio_data, audio_sr),
-                ref_text=ref_text,
-            )
+            # voice_clone_prompt 생성 (ref_audio는 파일 경로 또는 리스트 형식으로 전달)
+            if isinstance(ref_audio, str):
+                # 파일 경로 직접 사용
+                voice_clone_prompt = self.model.create_voice_clone_prompt(
+                    ref_audio=ref_audio,
+                    ref_text=ref_text,
+                )
+            else:
+                # numpy array는 리스트로 감싸서 전달
+                voice_clone_prompt = self.model.create_voice_clone_prompt(
+                    ref_audio=[audio_data, audio_sr],
+                    ref_text=ref_text,
+                )
             
             # 캐시에 저장
             self.ref_cache.set_features(ref_audio, voice_clone_prompt, ref_text)
