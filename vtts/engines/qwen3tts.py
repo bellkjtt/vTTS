@@ -91,7 +91,14 @@ class Qwen3TTSEngine(BaseTTSEngine):
             )
         
         # 디바이스 설정
-        device_map = f"cuda:{self.device.split(':')[-1]}" if "cuda" in self.device else "cpu"
+        if self.device == "cuda" or self.device.startswith("cuda:"):
+            # cuda:0, cuda:1 등의 형식으로 맞춤
+            if ":" in self.device:
+                device_map = self.device  # 이미 cuda:0 형식
+            else:
+                device_map = "cuda:0"  # cuda -> cuda:0
+        else:
+            device_map = "cpu"
         
         # dtype 설정 (bfloat16 권장)
         dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
