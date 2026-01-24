@@ -65,6 +65,7 @@ vtts serve FunAudioLLM/CosyVoice2-0.5B --port 8000
 | GPT-SoVITS | `kevinwang676/*`, `*gptsovits*` | zh, en, ja, ko, yue | Voice cloning |
 | CosyVoice | `FunAudioLLM/*`, `*cosyvoice*` | zh, en, ja, ko + 방언 | Zero-shot TTS |
 | Supertonic | `Supertone/*`, `*supertonic*` | ko, en, ja, zh | 고품질 한국어 |
+| Qwen3-TTS | `Qwen/Qwen3-TTS*` | 10개 언어 | 스트리밍, Voice Design |
 
 ## API 사용법
 
