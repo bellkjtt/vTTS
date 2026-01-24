@@ -23,14 +23,24 @@
 ## 지원 모델
 
 ### TTS (Text-to-Speech)
-| 엔진 | 속도 | 품질 | 다국어 | 음성 클로닝 | 참조 오디오 |
-|------|------|------|--------|------------|------------|
-| **Supertonic-2** | Very Fast | Good | 5개 언어 | No | 불필요 |
-| **GPT-SoVITS v3** | Moderate | Excellent | 5개 언어 | Zero-shot | **필수** |
-| **CosyVoice3** | Fast | Very Good | 9개 언어 | Optional | 선택적 |
-| **StyleTTS2**, **XTTS-v2**, **Bark** (Coming Soon) | - | - | - | - | - |
+| 엔진 | 생성 시간* | 품질 | 다국어 | 음성 클로닝 | 참조 오디오 |
+|------|-----------|------|--------|------------|------------|
+| **Supertonic-2** | **0.8초** | Good | 5개 언어 | No | 불필요 |
+| **Qwen3-TTS** | 5~7초 | **Excellent** | 10개 언어 | Zero-shot | 선택적 |
+| **GPT-SoVITS v3** | 7~8초 | Excellent | 5개 언어 | Zero-shot | **필수** |
+| **CosyVoice2** | 11초 | Very Good | 9개 언어 | Zero-shot | 선택적 |
 
-> **GPT-SoVITS**: Zero-shot 음성 클로닝 모델로, 합성할 목표 음성의 참조 오디오(3~10초)가 필수입니다.
+> *생성 시간: 동일 텍스트(~50자) 기준, GPU (RTX 4090)
+
+### Qwen3-TTS 모델 종류
+| 모델 | 크기 | 참조 오디오 | 특징 |
+|------|------|------------|------|
+| `Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice` | 0.6B | 불필요 | 9개 프리셋 스피커 |
+| `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` | 1.7B | 불필요 | 9개 프리셋 스피커 (고품질) |
+| `Qwen/Qwen3-TTS-12Hz-0.6B-Base` | 0.6B | **필요** | Voice Clone |
+| `Qwen/Qwen3-TTS-12Hz-1.7B-Base` | 1.7B | **필요** | Voice Clone (고품질) |
+
+> **GPT-SoVITS**: Zero-shot 음성 클로닝 모델로, 참조 오디오(3~10초) + 참조 텍스트가 필수입니다.
 
 ### STT (Speech-to-Text)
 - **Faster-Whisper** - 초고속 Whisper (CTranslate2)
@@ -94,10 +104,32 @@ vtts serve kevinwang676/GPT-SoVITS-v3 --port 8002 --device cuda
 pip install "vtts[cosyvoice] @ git+https://github.com/bellkjtt/vTTS.git"
 
 # 2. 서버 실행 (모델 자동 다운로드!)
-vtts serve FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --device cuda --port 8001
+vtts serve FunAudioLLM/CosyVoice2-0.5B --device cuda --port 8001
 ```
 
 > **CosyVoice 코드가 vTTS에 내장되어 별도 클론이 필요 없습니다!**
+
+#### 옵션 4: Qwen3-TTS (고품질 TTS)
+
+```bash
+# 1. vTTS + Qwen3-TTS 설치
+pip install "vtts[qwen3tts] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 2. CustomVoice (프리셋 스피커, 참조 오디오 불필요)
+vtts serve Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice --device cuda --port 8001
+
+# 3. Base (Voice Clone, 참조 오디오 필요)
+vtts serve Qwen/Qwen3-TTS-12Hz-0.6B-Base --device cuda --port 8001
+```
+
+> **Qwen3-TTS는 10개 언어 지원, CustomVoice는 9개 프리셋 스피커 제공!**
+
+#### 옵션 5: 모든 엔진 한번에
+
+```bash
+# 모든 TTS 엔진 설치
+pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
+```
 
 ### Docker (여러 엔진 동시 사용)
 
@@ -211,6 +243,24 @@ vtts serve kevinwang676/GPT-SoVITS-v3 --device cuda --port 8002
 - 첫 실행 시 [HuggingFace](https://huggingface.co/kevinwang676/GPT-SoVITS-v3/tree/main/GPT_SoVITS/pretrained_models)에서 **자동으로 pretrained 모델을 다운로드**합니다 (~2.9 GB)
 - 모델은 `~/.cache/huggingface/` 에 캐시되며, 이후 재사용됩니다
 
+### Qwen3-TTS (고품질 다국어 TTS)
+
+```bash
+# CustomVoice: 프리셋 스피커 사용 (참조 오디오 불필요)
+vtts serve Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice --device cuda --port 8003
+
+# Base: Voice Clone (참조 오디오 필요)
+vtts serve Qwen/Qwen3-TTS-12Hz-0.6B-Base --device cuda --port 8003
+
+# 고품질 1.7B 모델 (더 자연스러운 음성)
+vtts serve Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice --device cuda --port 8003
+```
+
+**참고:**
+- **10개 언어 지원**: 한국어, 영어, 중국어, 일본어, 독일어, 프랑스어, 러시아어, 포르투갈어, 스페인어, 이탈리아어
+- **CustomVoice 스피커**: Vivian, Serena, Uncle_Fu, Dylan, Eric, Ryan, Aiden, Ono_Anna, **Sohee** (한국어)
+- **참조 오디오 캐싱**: 동일 참조 오디오 재사용 시 지연 없음
+
 ### TTS + STT 동시
 ```bash
 vtts serve Supertone/supertonic-2 --stt-model large-v3
@@ -312,6 +362,48 @@ audio.save("cloned_voice.wav")
 ```
 > **NOTE**: GPT-SoVITS는 `reference_audio`와 `reference_text` 파라미터가 필수입니다!
 
+### Qwen3-TTS (CustomVoice - 프리셋 스피커)
+```python
+from vtts import VTTSClient
+
+# Qwen3-TTS CustomVoice 클라이언트
+client = VTTSClient("http://localhost:8003")
+
+audio = client.tts(
+    text="안녕하세요, Qwen3 TTS로 생성한 음성입니다.",
+    model="Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+    voice="Sohee",    # 한국어 스피커
+    language="ko"
+)
+audio.save("qwen3_customvoice.wav")
+```
+
+**CustomVoice 스피커 목록:**
+- 한국어: `Sohee`
+- 영어: `Vivian`, `Serena`, `Dylan`, `Eric`, `Ryan`, `Aiden`
+- 일본어: `Ono_Anna`
+- 중국어: `Uncle_Fu`
+
+### Qwen3-TTS (Base - Voice Clone)
+```python
+from vtts import VTTSClient
+
+# Qwen3-TTS Base 클라이언트 (Voice Clone)
+client = VTTSClient("http://localhost:8003")
+
+audio = client.tts(
+    text="안녕하세요, Voice Clone으로 생성한 음성입니다.",
+    model="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    voice="reference",
+    language="ko",
+    reference_audio="./samples/reference.wav",  # 참조 오디오 (필수!)
+    reference_text="참조 오디오에서 말하는 내용"  # 참조 텍스트 (필수!)
+)
+audio.save("qwen3_voice_clone.wav")
+```
+
+> **NOTE**: Qwen3-TTS Base는 동일 참조 오디오 재사용 시 voice_clone_prompt가 캐싱되어 속도가 향상됩니다!
+
 **파라미터 가이드:**
 | 파라미터 | 기본값 | 범위 | 설명 |
 |---------|-------|------|------|
@@ -347,11 +439,66 @@ response.stream_to_file("output.mp3")
 ```
 
 ### cURL
+
+#### Supertonic (가장 빠름)
 ```bash
 curl -X POST http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
-  -d '{"input": "Hello!", "voice": "F1", "model": "Supertone/supertonic-2"}' \
-  --output output.mp3
+  -d '{"input": "Hello!", "voice": "F1", "model": "Supertone/supertonic-2", "language": "en"}' \
+  --output supertonic.mp3
+```
+
+#### Qwen3-TTS CustomVoice (프리셋 스피커)
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"input": "안녕하세요, Qwen3 TTS입니다.", "voice": "Sohee", "model": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice", "language": "ko"}' \
+  --output qwen3_customvoice.wav
+```
+
+#### Qwen3-TTS Base (Voice Clone)
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "안녕하세요, Voice Clone입니다.",
+    "voice": "reference",
+    "model": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    "language": "ko",
+    "reference_audio": "/path/to/reference.wav",
+    "reference_text": "참조 오디오의 텍스트"
+  }' \
+  --output qwen3_voice_clone.wav
+```
+
+#### GPT-SoVITS (Voice Clone)
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "안녕하세요, GPT-SoVITS입니다.",
+    "voice": "reference",
+    "model": "kevinwang676/GPT-SoVITS-v3",
+    "language": "ko",
+    "reference_audio": "/path/to/reference.wav",
+    "reference_text": "참조 오디오의 텍스트"
+  }' \
+  --output gptsovits.wav
+```
+
+#### CosyVoice (Voice Clone)
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "안녕하세요, CosyVoice입니다.",
+    "voice": "reference",
+    "model": "FunAudioLLM/CosyVoice2-0.5B",
+    "language": "ko",
+    "reference_audio": "/path/to/reference.wav",
+    "reference_text": "참조 오디오의 텍스트"
+  }' \
+  --output cosyvoice.wav
 ```
 
 ---
@@ -365,6 +512,8 @@ curl -X POST http://localhost:8000/v1/audio/speech \
 | Supertonic | 8001 | ~1GB |
 | GPT-SoVITS | 8002 | ~4GB |
 | CosyVoice | 8003 | ~3GB |
+| Qwen3-TTS 0.6B | 8004 | ~2GB |
+| Qwen3-TTS 1.7B | 8004 | ~4GB |
 
 ### 빠른 시작
 ```bash
@@ -520,6 +669,7 @@ Apache License 2.0
 
 - [vLLM](https://github.com/vllm-project/vllm) - 아키텍처 영감
 - [Supertone](https://huggingface.co/Supertone/supertonic-2)
-- [FunAudioLLM](https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512)
+- [Qwen3-TTS](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice) - Alibaba
+- [FunAudioLLM](https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B)
 - [GPT-SoVITS](https://huggingface.co/kevinwang676/GPT-SoVITS-v3)
 - [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper)
