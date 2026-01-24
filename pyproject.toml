@@ -41,7 +41,7 @@ dependencies = [
     
     # HuggingFace
     "huggingface-hub>=0.20.0",
-    "transformers==4.57.1",  # 모든 엔진 호환 버전
+    "transformers>=4.57.0",  # 모든 엔진 호환 버전
     
     # ONNX Runtime
     "onnxruntime-gpu>=1.17.0; platform_machine == 'x86_64'",
