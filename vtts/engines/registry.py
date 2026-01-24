@@ -130,6 +130,34 @@ def auto_register_engines():
     except ImportError as e:
         logger.debug(f"Qwen3-TTS engine not available: {e}")
     
+    try:
+        from vtts.engines.chatterbox import ChatterboxEngine
+        EngineRegistry.register(
+            "chatterbox",
+            ChatterboxEngine,
+            model_patterns=[
+                "ResembleAI/*",
+                "*chatterbox*",
+                "*Chatterbox*"
+            ]
+        )
+    except ImportError as e:
+        logger.debug(f"Chatterbox engine not available: {e}")
+    
+    try:
+        from vtts.engines.kanitts import KaniTTSEngine
+        EngineRegistry.register(
+            "kanitts",
+            KaniTTSEngine,
+            model_patterns=[
+                "nineninesix/*",
+                "*kani-tts*",
+                "*KaniTTS*"
+            ]
+        )
+    except ImportError as e:
+        logger.debug(f"KaniTTS engine not available: {e}")
+    
     logger.info(f"Auto-registered {len(EngineRegistry.list_engines())} TTS engines")
 
 

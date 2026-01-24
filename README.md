@@ -26,11 +26,34 @@
 | 엔진 | 생성 시간* | 품질 | 다국어 | 음성 클로닝 | 참조 오디오 |
 |------|-----------|------|--------|------------|------------|
 | **Supertonic-2** | **0.8초** | Good | 5개 언어 | No | 불필요 |
+| **KaniTTS** 🆕 | **1.9초** | Good | 6개 언어 | No | 불필요 |
+| **Chatterbox** 🆕 | 2초 | Very Good | **23개 언어** | Zero-shot | 선택적 |
 | **Qwen3-TTS** | 5~7초 | **Excellent** | 10개 언어 | Zero-shot | 선택적 |
 | **GPT-SoVITS v3** | 7~8초 | Excellent | 5개 언어 | Zero-shot | **필수** |
 | **CosyVoice2** | 11초 | Very Good | 9개 언어 | Zero-shot | 선택적 |
 
 > *생성 시간: 동일 텍스트(~50자) 기준, GPU (RTX 4090)
+
+### Chatterbox 모델 종류 (Resemble AI)
+| 모델 | 크기 | 언어 | 특징 |
+|------|------|------|------|
+| `ResembleAI/chatterbox` | 500M | English | CFG & Exaggeration control |
+| `ResembleAI/chatterbox-multilingual` | 500M | **23개** | 다국어 (한국어 포함) |
+| `ResembleAI/chatterbox-turbo` | 350M | English | 저지연, Paralinguistic tags |
+
+### KaniTTS 스피커 (NineNineSix)
+| 모델 | 크기 | 언어 | 특징 |
+|------|------|------|------|
+| `nineninesix/kani-tts-370m` | 370M | 6개 | 15+ 프리셋 스피커 |
+
+- **English**: david, puck, kore, andrew, jenny, simon, katie
+- **Korean**: seulgi
+- **German**: bert, thorsten
+- **Chinese**: mei, ming
+- **Arabic**: karim, nur
+- **Spanish**: maria
+
+> ⚠️ **KaniTTS 주의**: Python 3.11 + `nemo-toolkit` + `torch>=2.6` 필요 (별도 환경 권장)
 
 ### Qwen3-TTS 모델 종류
 | 모델 | 크기 | 참조 오디오 | 특징 |
@@ -124,10 +147,44 @@ vtts serve Qwen/Qwen3-TTS-12Hz-0.6B-Base --device cuda --port 8001
 
 > **Qwen3-TTS는 10개 언어 지원, CustomVoice는 9개 프리셋 스피커 제공!**
 
-#### 옵션 5: 모든 엔진 한번에
+#### 옵션 5: Chatterbox (23개 언어)
 
 ```bash
-# 모든 TTS 엔진 설치
+# 1. vTTS + Chatterbox 설치
+pip install "vtts[chatterbox] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 2. English
+vtts serve ResembleAI/chatterbox --device cuda --port 8001
+
+# 3. Multilingual (한국어 포함 23개 언어)
+vtts serve ResembleAI/chatterbox-multilingual --device cuda --port 8001
+```
+
+> **Chatterbox는 Resemble AI의 최신 TTS 모델로, 23개 언어와 감정 조절을 지원합니다!**
+
+#### 옵션 6: KaniTTS (초고속, 6개 언어)
+
+```bash
+# 별도 Python 3.11 환경 필요!
+conda create -n kanitts python=3.11 -y
+conda activate kanitts
+
+# KaniTTS 설치 (nemo-toolkit 포함)
+pip install kani-tts torch>=2.6.0 --index-url https://pypi.org/simple/
+
+# vTTS 설치
+pip install "vtts[kanitts] @ git+https://github.com/bellkjtt/vTTS.git"
+
+# 서버 실행
+vtts serve nineninesix/kani-tts-370m --device cuda --port 8001
+```
+
+> **KaniTTS는 15+ 스피커와 6개 언어를 지원하며, 1~2초의 초고속 생성이 가능합니다!**
+
+#### 옵션 7: 모든 엔진 한번에
+
+```bash
+# 모든 TTS 엔진 설치 (의존성 충돌 가능!)
 pip install "vtts[all] @ git+https://github.com/bellkjtt/vTTS.git"
 ```
 

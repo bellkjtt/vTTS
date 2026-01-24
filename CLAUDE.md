@@ -11,6 +11,7 @@ vtts serve kevinwang676/GPT-SoVITS-v3
 vtts serve FunAudioLLM/CosyVoice2-0.5B
 vtts serve Supertone/supertonic-2
 vtts serve Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice
+vtts serve ResembleAI/chatterbox          # NEW! Chatterbox
 ```
 
 **원칙:**
@@ -37,7 +38,7 @@ response = client.audio.speech.create(
 vtts serve FunAudioLLM/CosyVoice2-0.5B --port 8000
 ```
 
-## 지원 엔진 (2026.01)
+## 지원 엔진 (2026.01) - 6개 엔진
 
 | 엔진 | 모델 ID 패턴 | 언어 | 특징 | 의존성 |
 |------|-------------|------|------|--------|
@@ -45,6 +46,27 @@ vtts serve FunAudioLLM/CosyVoice2-0.5B --port 8000
 | **Qwen3-TTS** | `Qwen/Qwen3-TTS*` | 10개 언어 | Voice Clone, Base | `.[qwen3tts]` |
 | **GPT-SoVITS** | `kevinwang676/*` | zh, en, ja, ko, yue | Zero-shot Voice Clone | `.[gptsovits]` |
 | **CosyVoice** | `FunAudioLLM/*` | zh, en, ja, ko + 방언 | Zero-shot TTS | `.[cosyvoice]` |
+| **Chatterbox** | `ResembleAI/*` | **23개 언어** | Emotion Control, Turbo | `.[chatterbox]` |
+| **KaniTTS** 🆕 | `nineninesix/*` | en, de, zh, ko, ar, es | 15+ 스피커, 초고속 | `.[kanitts]` |
+
+### Chatterbox 모델 종류 (Resemble AI)
+- **Chatterbox** (500M): English, CFG & Exaggeration control
+- **Chatterbox-Multilingual** (500M): 23개 언어 지원 ✅ Korean 테스트 완료
+- **Chatterbox-Turbo** (350M): 저지연, Paralinguistic tags ([laugh], [cough])
+
+### KaniTTS 스피커 (NineNineSix) ✅ Korean/English 테스트 완료
+- **English**: david, puck, kore, andrew, jenny, simon, katie
+- **Korean**: seulgi
+- **German**: bert, thorsten
+- **Chinese**: mei (Cantonese), ming (Shanghai)
+- **Arabic**: karim, nur
+- **Spanish**: maria
+
+> ⚠️ **KaniTTS 설치 요구사항**:
+> - Python **3.11** 필수 (conda 별도 환경 권장)
+> - `torch>=2.6.0` (보안 패치)
+> - `transformers==4.57.1` (LFM2 호환)
+> - `nemo-toolkit` (대용량 의존성)
 
 ---
 
@@ -82,6 +104,7 @@ vtts serve Supertone/supertonic-2 --port 8001 --device cuda &
 vtts serve Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice --port 8002 --device cuda &
 vtts serve kevinwang676/GPT-SoVITS-v3 --port 8003 --device cuda &
 vtts serve FunAudioLLM/CosyVoice2-0.5B --port 8004 --device cuda &
+vtts serve ResembleAI/chatterbox --port 8005 --device cuda &
 ```
 
 **Python에서 모델 선택:**
@@ -91,6 +114,7 @@ MODELS = {
     "qwen3": "http://localhost:8002", 
     "gptsovits": "http://localhost:8003",
     "cosyvoice": "http://localhost:8004",
+    "chatterbox": "http://localhost:8005",
 }
 
 def synthesize(text, model_name="supertonic"):
@@ -142,6 +166,8 @@ pip install -e ".[supertonic]"   # Supertonic만 (가장 가벼움)
 pip install -e ".[qwen3tts]"     # Qwen3-TTS만
 pip install -e ".[gptsovits]"    # GPT-SoVITS만
 pip install -e ".[cosyvoice]"    # CosyVoice만
+pip install -e ".[chatterbox]"   # Chatterbox만 (23개 언어)
+pip install -e ".[kanitts]"      # KaniTTS만 (nemo-toolkit 필요, 대용량)
 
 # 전체 설치 (의존성 충돌 가능)
 pip install -e ".[all]"
@@ -226,6 +252,50 @@ curl -X POST http://localhost:8000/v1/audio/speech \
   }' --output output.wav
 ```
 
+**5. Chatterbox (23개 언어, Emotion Control)**
+```bash
+# English (기본)
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "ResembleAI/chatterbox",
+    "input": "Hello, this is Chatterbox TTS!",
+    "voice": "default"
+  }' --output output.wav
+
+# Korean (Multilingual 모델)
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "ResembleAI/chatterbox-multilingual",
+    "input": "안녕하세요, 한국어 테스트입니다.",
+    "voice": "default",
+    "language": "ko"
+  }' --output output.wav
+```
+
+**6. KaniTTS (15+ 스피커, 초고속)**
+```bash
+# Korean (seulgi 스피커)
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nineninesix/kani-tts-370m",
+    "input": "안녕하세요, 카니 TTS 테스트입니다.",
+    "voice": "seulgi",
+    "language": "ko"
+  }' --output output.wav
+
+# English (다양한 스피커)
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nineninesix/kani-tts-370m",
+    "input": "Hello, this is KaniTTS!",
+    "voice": "david"
+  }' --output output.wav
+```
+
 ### Python 클라이언트
 
 ```python
@@ -268,6 +338,8 @@ vtts/
     ├── qwen3tts.py           # Qwen3-TTS 엔진
     ├── gptsovits.py          # GPT-SoVITS 엔진
     ├── cosyvoice.py          # CosyVoice 엔진
+    ├── chatterbox.py         # Chatterbox 엔진
+    ├── kanitts.py            # KaniTTS 엔진 (NEW!)
     ├── faster_whisper.py     # STT 엔진
     │
     ├── _supertonic/          # 내장 코드 (필요시)
@@ -333,8 +405,83 @@ new_engine = ["some-dependency>=1.0.0"]
 
 | 항목 | 컨벤션 | 예시 |
 |------|--------|------|
-| 엔진 파일 | `snake_case.py` | `qwen3tts.py`, `gpt_sovits.py` |
-| 엔진 클래스 | `PascalCase + Engine` | `Qwen3TTSEngine`, `GPTSoVITSEngine` |
+| 엔진 파일 | `snake_case.py` | `qwen3tts.py`, `chatterbox.py` |
+| 엔진 클래스 | `PascalCase + Engine` | `Qwen3TTSEngine`, `ChatterboxEngine` |
+
+---
+
+## 📈 확장 가능한 엔진 관리 (20+ 모델 대비)
+
+### 현재 지원 엔진 (6개)
+```
+vtts/engines/
+├── supertonic.py      # Supertone (ONNX)
+├── qwen3tts.py        # Alibaba Qwen3-TTS
+├── gptsovits.py       # RVC-Boss GPT-SoVITS
+├── cosyvoice.py       # Alibaba CosyVoice
+├── chatterbox.py      # Resemble AI Chatterbox
+├── kanitts.py         # NineNineSix KaniTTS (NEW!)
+└── registry.py        # 자동 엔진 등록
+```
+
+### 엔진 자동 등록 시스템
+
+`registry.py`에서 모든 엔진이 자동으로 등록됩니다:
+
+```python
+# registry.py의 auto_register_engines()
+try:
+    from vtts.engines.chatterbox import ChatterboxEngine
+    EngineRegistry.register(
+        "chatterbox",
+        ChatterboxEngine,
+        model_patterns=["ResembleAI/*", "*chatterbox*"]
+    )
+except ImportError as e:
+    logger.debug(f"Chatterbox engine not available: {e}")
+```
+
+### 20개 이상 엔진 추가 시 권장 구조
+
+```
+vtts/engines/
+├── __init__.py
+├── base.py            # BaseTTSEngine
+├── registry.py        # 자동 등록 시스템
+│
+├── # === 기존 엔진 (5개) ===
+├── supertonic.py
+├── qwen3tts.py
+├── gptsovits.py
+├── cosyvoice.py
+├── chatterbox.py
+│
+├── # === 향후 추가 예정 ===
+├── f5tts.py           # F5-TTS
+├── valle.py           # VALL-E
+├── xtts.py            # Coqui XTTS
+├── bark.py            # Suno Bark
+├── tortoise.py        # Tortoise TTS
+├── parler.py          # Parler TTS
+├── styletts2.py       # StyleTTS 2
+├── voicecraft.py      # VoiceCraft
+├── metavoice.py       # MetaVoice
+├── fishspeech.py      # Fish Speech
+│
+├── # === 내장 코드 (필요시) ===
+├── _gptsovits/        # 내장 GPT-SoVITS
+└── _cosyvoice/        # 내장 CosyVoice
+```
+
+### 엔진 추가 체크리스트
+
+새 엔진 추가 시:
+1. [ ] `vtts/engines/new_engine.py` 생성
+2. [ ] `BaseTTSEngine` 상속 및 필수 메서드 구현
+3. [ ] `registry.py`의 `auto_register_engines()`에 등록
+4. [ ] `pyproject.toml`에 optional dependency 추가
+5. [ ] CLAUDE.md 엔진 테이블 업데이트
+6. [ ] Fresh 환경에서 테스트 (CUDA + CPU)
 | 내장 코드 폴더 | `_prefix` | `_gptsovits/`, `_cosyvoice/` |
 | 레지스트리 이름 | `lowercase` | `qwen3tts`, `gptsovits` |
 
@@ -363,12 +510,16 @@ python -c "import soundfile as sf; d,r = sf.read('test.wav'); print(f'{r}Hz, {le
 
 ### CUDA 테스트 결과 (2026-01-24)
 
-| 모델 | CUDA | 샘플레이트 | 생성 시간 |
-|------|------|-----------|----------|
-| Supertonic | ✅ | 44100Hz | ~1s |
-| Qwen3-TTS 0.6B | ✅ | 24000Hz | ~5s |
-| GPT-SoVITS v3 | ✅ | 24000Hz | ~6s |
-| CosyVoice2 0.5B | ✅ | 24000Hz | ~4s |
+| 모델 | CUDA | 샘플레이트 | 생성 시간 | 특징 |
+|------|------|-----------|----------|------|
+| Supertonic | ✅ | 44100Hz | ~1s | ONNX |
+| Qwen3-TTS 0.6B | ✅ | 24000Hz | ~5s | Voice Clone |
+| GPT-SoVITS v3 | ✅ | 24000Hz | ~6s | Zero-shot |
+| CosyVoice2 0.5B | ✅ | 24000Hz | ~4s | Zero-shot |
+| **Chatterbox** | ✅ | 24000Hz | ~2s | English |
+| **Chatterbox Korean** | ✅ | 24000Hz | ~2s | Multilingual |
+| **KaniTTS Korean** ✅ | ✅ | 22050Hz | ~1.9s | seulgi 스피커 |
+| **KaniTTS English** ✅ | ✅ | 22050Hz | ~2.1s | david 스피커 |
 
 ---
 

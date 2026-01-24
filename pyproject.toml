@@ -128,6 +128,17 @@ qwen3tts = [
     "sox>=1.4.0",
 ]
 
+# Chatterbox - Resemble AI's SoTA TTS
+chatterbox = [
+    "chatterbox-tts>=0.1.0",
+]
+
+# KaniTTS - High-speed conversational TTS
+kanitts = [
+    "kani-tts>=0.1.0",
+    "transformers>=4.57.0",  # LFM2 요구사항
+]
+
 # All TTS engines
 all = [
     # Whisper (CosyVoice용)
@@ -170,6 +181,10 @@ all = [
     "opencc",
     # Qwen3-TTS
     "qwen-tts",
+    # Chatterbox
+    "chatterbox-tts>=0.1.0",
+    # KaniTTS
+    "kani-tts>=0.1.0",
 ]
 
 [project.scripts]
