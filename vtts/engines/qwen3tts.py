@@ -8,17 +8,8 @@ import torch
 from loguru import logger
 
 from .base import BaseTTSEngine, TTSOutput, TTSRequest
-from .registry import register_tts_engine
 
 
-@register_tts_engine(
-    name="qwen3tts",
-    patterns=[
-        "Qwen/Qwen3-TTS*",
-        "*Qwen3-TTS*",
-        "*qwen3-tts*",
-    ]
-)
 class Qwen3TTSEngine(BaseTTSEngine):
     """Qwen3-TTS Engine
     

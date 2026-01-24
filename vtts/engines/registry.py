@@ -120,6 +120,16 @@ def auto_register_engines():
     except ImportError as e:
         logger.debug(f"GPT-SoVITS engine not available: {e}")
     
+    try:
+        from vtts.engines.qwen3tts import Qwen3TTSEngine
+        EngineRegistry.register(
+            "qwen3tts",
+            Qwen3TTSEngine,
+            model_patterns=["Qwen/Qwen3-TTS*", "*Qwen3-TTS*", "*qwen3-tts*"]
+        )
+    except ImportError as e:
+        logger.debug(f"Qwen3-TTS engine not available: {e}")
+    
     logger.info(f"Auto-registered {len(EngineRegistry.list_engines())} TTS engines")
 
 
