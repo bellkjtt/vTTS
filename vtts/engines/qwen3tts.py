@@ -236,7 +236,7 @@ class Qwen3TTSEngine(BaseTTSEngine):
         request: TTSRequest,
         extra: Dict[str, Any]
     ) -> np.ndarray:
-        """Base 모델로 Voice Clone"""
+        """Base 모델로 Voice Clone (캐시된 voice_clone_prompt 사용)"""
         ref_audio = request.reference_audio
         ref_text = request.reference_text
         
@@ -245,17 +245,38 @@ class Qwen3TTSEngine(BaseTTSEngine):
         
         logger.info(f"Using Voice Clone with ref_audio={ref_audio}")
         
-        # reference_audio 처리
-        if isinstance(ref_audio, np.ndarray):
-            # numpy array인 경우 튜플로 변환
-            ref_audio = (ref_audio, self.sample_rate)
+        # 캐시된 voice_clone_prompt 확인
+        cached_prompt = self.ref_cache.get_features(ref_audio, ref_text)
         
-        wavs, sr = self.model.generate_voice_clone(
-            text=text,
-            language=language,
-            ref_audio=ref_audio,
-            ref_text=ref_text,
-        )
+        if cached_prompt is not None:
+            logger.info("Using cached voice_clone_prompt")
+            wavs, sr = self.model.generate_voice_clone(
+                text=text,
+                language=language,
+                voice_clone_prompt=cached_prompt,
+            )
+        else:
+            # 캐시 없음 - 새로 생성
+            logger.info("Creating new voice_clone_prompt and caching")
+            
+            # reference_audio 로드
+            audio_data, audio_sr = self.ref_cache.load_audio(ref_audio, ref_text)
+            
+            # voice_clone_prompt 생성
+            voice_clone_prompt = self.model.create_voice_clone_prompt(
+                ref_audio=(audio_data, audio_sr),
+                ref_text=ref_text,
+            )
+            
+            # 캐시에 저장
+            self.ref_cache.set_features(ref_audio, voice_clone_prompt, ref_text)
+            
+            # 합성
+            wavs, sr = self.model.generate_voice_clone(
+                text=text,
+                language=language,
+                voice_clone_prompt=voice_clone_prompt,
+            )
         
         self.sample_rate = sr
         return wavs[0]

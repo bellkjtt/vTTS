@@ -258,8 +258,8 @@ class CosyVoiceEngine(BaseTTSEngine):
         """Zero-shot mode로 합성 (참조 오디오 사용)"""
         logger.info("Using CosyVoice zero-shot mode with reference audio")
         
-        # 참조 오디오 로드
-        reference_audio = self._load_reference_audio(request.reference_audio)
+        # 참조 오디오 로드 (캐시 사용)
+        reference_audio = self._load_reference_audio(request.reference_audio, request.reference_text)
         
         # CosyVoice3는 특수한 프롬프트 형식 필요
         # 형식: "You are a helpful assistant.<|endofprompt|>참조 텍스트"
@@ -350,8 +350,8 @@ class CosyVoiceEngine(BaseTTSEngine):
         # 모든 청크 연결
         return np.concatenate([chunk.flatten() for chunk in audio_chunks])
     
-    def _load_reference_audio(self, reference: Union[str, Path, bytes, np.ndarray]) -> str:
-        """참조 오디오를 로드합니다.
+    def _load_reference_audio(self, reference: Union[str, Path, bytes, np.ndarray], ref_text: Optional[str] = None) -> str:
+        """참조 오디오를 로드합니다. (캐시 사용)
         
         CosyVoice는 파일 경로를 직접 받습니다.
         bytes나 ndarray인 경우 임시 파일로 저장합니다.
@@ -359,34 +359,47 @@ class CosyVoiceEngine(BaseTTSEngine):
         import tempfile
         import soundfile as sf
         
+        # 캐시된 파일 경로 확인
+        cached_path = self.ref_cache.get_features(reference, ref_text)
+        if cached_path and isinstance(cached_path, str) and os.path.exists(cached_path):
+            logger.info(f"Using cached reference audio: {cached_path}")
+            return cached_path
+        
+        result_path = None
+        
         if isinstance(reference, (str, Path)):
             path = str(reference)
             if os.path.exists(path):
-                return path
-            # base64인 경우
-            import base64
-            try:
-                audio_bytes = base64.b64decode(reference)
-                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-                    f.write(audio_bytes)
-                    return f.name
-            except:
-                raise FileNotFoundError(f"Reference audio not found: {path}")
+                result_path = path
+            else:
+                # base64인 경우
+                import base64
+                try:
+                    audio_bytes = base64.b64decode(reference)
+                    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+                        f.write(audio_bytes)
+                        result_path = f.name
+                except:
+                    raise FileNotFoundError(f"Reference audio not found: {path}")
         
         elif isinstance(reference, bytes):
-            # bytes를 임시 파일로 저장
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
                 f.write(reference)
-                return f.name
+                result_path = f.name
         
         elif isinstance(reference, np.ndarray):
-            # numpy array를 임시 파일로 저장
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
                 sf.write(f.name, reference, 16000)
-                return f.name
+                result_path = f.name
         
         else:
             raise ValueError(f"Unsupported reference audio type: {type(reference)}")
+        
+        # 캐시에 저장
+        if result_path:
+            self.ref_cache.set_features(reference, result_path, ref_text)
+        
+        return result_path
     
     def _map_voice_to_speaker(self, voice: str) -> str:
         """Voice ID를 CosyVoice speaker ID로 매핑"""

@@ -224,8 +224,8 @@ class GPTSoVITSEngine(BaseTTSEngine):
         logger.info(f"Reference audio: {request.reference_audio}")
         
         try:
-            # 참조 오디오 경로 준비
-            ref_audio_path = self._prepare_reference_audio(request.reference_audio)
+            # 참조 오디오 경로 준비 (캐시 사용)
+            ref_audio_path = self._prepare_reference_audio(request.reference_audio, request.reference_text)
             
             # 추론 요청 생성
             inference_req = {
@@ -308,47 +308,53 @@ class GPTSoVITSEngine(BaseTTSEngine):
             logger.error(traceback.format_exc())
             raise RuntimeError(f"GPT-SoVITS synthesis failed: {e}") from e
     
-    def _prepare_reference_audio(self, reference: Union[str, Path, bytes]) -> str:
-        """참조 오디오를 준비합니다."""
+    def _prepare_reference_audio(self, reference: Union[str, Path, bytes], ref_text: Optional[str] = None) -> str:
+        """참조 오디오를 준비합니다. (캐시 사용)"""
         import soundfile as sf
         import base64
+        
+        # 캐시된 임시 파일 경로 확인
+        cached_features = self.ref_cache.get_features(reference, ref_text)
+        if cached_features and isinstance(cached_features, str) and os.path.exists(cached_features):
+            logger.info(f"Using cached reference audio: {cached_features}")
+            return cached_features
         
         if isinstance(reference, (str, Path)):
             path = Path(reference)
             
             # 상대 경로인 경우 절대 경로로 변환
-            # (서버가 chdir로 디렉토리를 변경했을 수 있으므로)
             if not path.is_absolute():
                 path = path.resolve()
                 logger.info(f"Resolved relative path to: {path}")
             
             if path.exists():
                 logger.info(f"Using reference audio: {path}")
-                return str(path.absolute())
+                ref_path = str(path.absolute())
+                # 캐시에 저장
+                self.ref_cache.set_features(reference, ref_path, ref_text)
+                return ref_path
             
             # base64 인코딩된 데이터인지 확인
             if isinstance(reference, str) and reference.startswith("data:audio"):
-                # data:audio/wav;base64,xxxxx 형식
                 header, data = reference.split(",", 1)
                 audio_bytes = base64.b64decode(data)
                 
-                temp_file = tempfile.NamedTemporaryFile(
-                    delete=False, suffix=".wav"
-                )
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
                 temp_file.write(audio_bytes)
                 temp_file.close()
                 logger.info(f"Decoded base64 audio to: {temp_file.name}")
+                # 캐시에 저장
+                self.ref_cache.set_features(reference, temp_file.name, ref_text)
                 return temp_file.name
             
             raise FileNotFoundError(f"Reference audio not found: {reference} (resolved to: {path})")
         
         elif isinstance(reference, bytes):
-            # bytes 데이터
-            temp_file = tempfile.NamedTemporaryFile(
-                delete=False, suffix=".wav"
-            )
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
             temp_file.write(reference)
             temp_file.close()
+            # 캐시에 저장
+            self.ref_cache.set_features(reference, temp_file.name, ref_text)
             return temp_file.name
         
         else:
