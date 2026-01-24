@@ -117,6 +117,11 @@ class GPTSoVITSEngine(BaseTTSEngine):
             # Pretrained 모델 경로 설정
             pretrained_dir = os.path.join(hf_model_path, "GPT_SoVITS", "pretrained_models")
             
+            # BigVGAN 경로를 환경 변수로 설정 (TTS.py에서 사용)
+            bigvgan_path = os.path.join(pretrained_dir, "models--nvidia--bigvgan_v2_24khz_100band_256x")
+            os.environ["GPT_SOVITS_BIGVGAN_PATH"] = bigvgan_path
+            logger.info(f"BigVGAN path: {bigvgan_path}")
+            
             # 디바이스 설정
             if self.device == "auto":
                 self.device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -10,8 +10,10 @@ from copy import deepcopy
 import torchaudio
 from tqdm import tqdm
 
-now_dir = os.getcwd()
-sys.path.append(now_dir)
+# 내장된 _gptsovits 패키지의 루트 경로를 사용
+now_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if now_dir not in sys.path:
+    sys.path.insert(0, now_dir)
 import os
 from typing import List, Tuple, Union
 
@@ -621,8 +623,13 @@ class TTS:
                 del self.vocoder
                 self.empty_cache()
 
+            # 환경 변수에서 BigVGAN 경로를 가져오거나 기본 경로 사용
+            bigvgan_path = os.environ.get(
+                "GPT_SOVITS_BIGVGAN_PATH",
+                "%s/GPT_SoVITS/pretrained_models/models--nvidia--bigvgan_v2_24khz_100band_256x" % (now_dir,)
+            )
             self.vocoder = BigVGAN.from_pretrained(
-                "%s/GPT_SoVITS/pretrained_models/models--nvidia--bigvgan_v2_24khz_100band_256x" % (now_dir,),
+                bigvgan_path,
                 use_cuda_kernel=False,
             )  # if True, RuntimeError: Ninja is required to load C++ extensions
             # remove weight norm in the model and set to eval mode

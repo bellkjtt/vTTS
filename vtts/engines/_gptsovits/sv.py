@@ -2,8 +2,11 @@ import sys
 import os
 import torch
 
-sys.path.append(f"{os.getcwd()}/GPT_SoVITS/eres2net")
-sv_path = "GPT_SoVITS/pretrained_models/sv/pretrained_eres2netv2w24s4ep4.ckpt"
+# 내장된 _gptsovits 패키지의 eres2net 경로 사용
+_gptsovits_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(_gptsovits_root, "eres2net"))
+# pretrained model 경로는 gptsovits.py에서 설정됨
+sv_path = os.environ.get("GPT_SOVITS_SV_PATH", "GPT_SoVITS/pretrained_models/sv/pretrained_eres2netv2w24s4ep4.ckpt")
 from ERes2NetV2 import ERes2NetV2
 import kaldi as Kaldi
 
