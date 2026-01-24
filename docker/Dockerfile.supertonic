@@ -60,12 +60,12 @@ RUN pip3 install --no-cache-dir "numpy>=1.24.0,<2.0.0"
 # 2. onnxruntime-gpu 정확히 고정 (CosyVoice와 호환)
 RUN pip3 install --no-cache-dir "onnxruntime-gpu==1.18.0"
 
-# 3. setup.py 복사
-COPY setup.py pyproject.toml ./
+# 3. 앱 복사
+COPY pyproject.toml ./
 COPY vtts/ vtts/
 
-# 4. vTTS 기본 설치 (supertonic deps는 이미 설치됨)
-RUN pip3 install --no-cache-dir -e .
+# 4. vTTS 설치
+RUN pip3 install --no-cache-dir .
 
 # ============================================================
 # 앱 복사
