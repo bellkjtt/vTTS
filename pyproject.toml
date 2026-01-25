@@ -202,6 +202,8 @@ all = [
     # KaniTTS (kani-tts는 엔진에서 --no-deps로 자동 설치)
     "nemo-toolkit[tts]==2.3.0",
     "datasets>=3.0.0",
+    # Parler-TTS
+    "parler-tts>=0.2.0",
 ]
 
 [project.scripts]

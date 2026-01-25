@@ -171,6 +171,32 @@ def auto_register_engines():
     except ImportError as e:
         logger.debug(f"Bark engine not available: {e}")
     
+    try:
+        from vtts.engines.parler import ParlerTTSEngine
+        EngineRegistry.register(
+            "parler",
+            ParlerTTSEngine,
+            model_patterns=[
+                "parler-tts/*",
+                "*parler*"
+            ]
+        )
+    except ImportError as e:
+        logger.debug(f"Parler-TTS engine not available: {e}")
+    
+    try:
+        from vtts.engines.speecht5 import SpeechT5Engine
+        EngineRegistry.register(
+            "speecht5",
+            SpeechT5Engine,
+            model_patterns=[
+                "microsoft/speecht5*",
+                "*speecht5*"
+            ]
+        )
+    except ImportError as e:
+        logger.debug(f"SpeechT5 engine not available: {e}")
+    
     logger.info(f"Auto-registered {len(EngineRegistry.list_engines())} TTS engines")
 
 
