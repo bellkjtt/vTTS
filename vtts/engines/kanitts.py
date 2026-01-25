@@ -92,6 +92,31 @@ class KaniTTSEngine(BaseTTSEngine):
         
         self.model = None
         
+    def _ensure_kanitts_installed(self) -> None:
+        """kani-tts 패키지가 설치되어 있는지 확인하고, 없으면 설치합니다."""
+        try:
+            import kani_tts
+        except ImportError:
+            logger.info("kani-tts not found, installing...")
+            import subprocess
+            import sys
+            
+            # kani-tts --no-deps로 설치 (nemo-toolkit 버전 충돌 우회)
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "kani-tts", "--no-deps", "-q"],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"Failed to install kani-tts: {result.stderr}")
+                raise ImportError(
+                    "Failed to install kani-tts. "
+                    "Try manually: pip install 'vtts[kanitts]'"
+                )
+            
+            logger.info("kani-tts installed successfully")
+    
     def load_model(self) -> None:
         """모델을 로드합니다."""
         if self.is_loaded:
@@ -99,6 +124,9 @@ class KaniTTSEngine(BaseTTSEngine):
             return
         
         logger.info(f"Loading KaniTTS model: {self.model_id}")
+        
+        # kani-tts 패키지 확인 및 자동 설치
+        self._ensure_kanitts_installed()
         
         try:
             from kani_tts import KaniTTS
