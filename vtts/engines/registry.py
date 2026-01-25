@@ -186,18 +186,7 @@ def auto_register_engines():
     except ImportError as e:
         logger.debug(f"SpeechT5 engine not available: {e}")
     
-    try:
-        from vtts.engines.vibevoice import VibeVoiceEngine
-        EngineRegistry.register(
-            "vibevoice",
-            VibeVoiceEngine,
-            model_patterns=[
-                "microsoft/VibeVoice*",
-                "*vibevoice*"
-            ]
-        )
-    except ImportError as e:
-        logger.debug(f"VibeVoice engine not available: {e}")
+    # VibeVoice: GitHub disabled 상태로 보류 (microsoft/VibeVoice-Realtime-0.5B)
     
     logger.info(f"Auto-registered {len(EngineRegistry.list_engines())} TTS engines")
 
