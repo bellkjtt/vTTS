@@ -74,7 +74,6 @@ class SpeechT5Engine(BaseTTSEngine):
         
         try:
             from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
-            from datasets import load_dataset
             
             # Processor 로드
             self.processor = SpeechT5Processor.from_pretrained(
@@ -96,29 +95,39 @@ class SpeechT5Engine(BaseTTSEngine):
                 torch_dtype=torch.float16 if self._device == "cuda" else torch.float32
             )
             
-            # Speaker embeddings 로드
-            embeddings_dataset = load_dataset(
-                "Matthijs/cmu-arctic-xvectors",
-                split="validation",
-                cache_dir=self.cache_dir
-            )
-            self.speaker_embeddings = torch.tensor(
-                embeddings_dataset[0]["xvector"]
-            ).unsqueeze(0)
+            # Speaker embeddings 로드 (datasets trust_remote_code 사용)
+            try:
+                from datasets import load_dataset
+                embeddings_dataset = load_dataset(
+                    "Matthijs/cmu-arctic-xvectors",
+                    split="validation",
+                    cache_dir=self.cache_dir,
+                    trust_remote_code=True
+                )
+                self.speaker_embeddings = torch.tensor(
+                    embeddings_dataset[7306]["xvector"]  # 기본 화자
+                ).unsqueeze(0)
+                self._all_embeddings = embeddings_dataset
+            except Exception as e:
+                # 실패 시 랜덤 embedding 사용 (기본값)
+                logger.warning(f"Failed to load speaker embeddings, using random: {e}")
+                self.speaker_embeddings = torch.randn(1, 512)
+                self._all_embeddings = None
             
-            # 전체 화자 임베딩 저장 (선택적 사용)
-            self._all_embeddings = embeddings_dataset
-            
-            # Device로 이동
+            # Device로 이동 (dtype 일치 필요)
+            target_dtype = torch.float16 if self._device == "cuda" else torch.float32
             self.model = self.model.to(self._device)
             self.vocoder = self.vocoder.to(self._device)
-            self.speaker_embeddings = self.speaker_embeddings.to(self._device)
+            self.speaker_embeddings = self.speaker_embeddings.to(self._device, dtype=target_dtype)
             
             self.is_loaded = True
             logger.info(f"Successfully loaded SpeechT5 model: {self.model_id}")
             logger.info(f"Device: {self._device}")
             logger.info(f"Sample rate: {self.sample_rate} Hz")
-            logger.info(f"Available speakers: {len(self._all_embeddings)}")
+            if self._all_embeddings is not None:
+                logger.info(f"Available speakers: {len(self._all_embeddings)}")
+            else:
+                logger.info("Using default speaker embedding")
             
         except Exception as e:
             logger.error(f"Failed to load SpeechT5 model: {e}")
@@ -148,22 +157,16 @@ class SpeechT5Engine(BaseTTSEngine):
         
     def _get_speaker_embedding(self, voice: Optional[str]) -> torch.Tensor:
         """Speaker embedding 결정"""
-        if voice is None:
+        if voice is None or self._all_embeddings is None:
             return self.speaker_embeddings
             
         # 숫자로 직접 지정한 경우
-        if voice.isdigit():
+        target_dtype = torch.float16 if self._device == "cuda" else torch.float32
+        if str(voice).isdigit():
             idx = int(voice) % len(self._all_embeddings)
             return torch.tensor(
                 self._all_embeddings[idx]["xvector"]
-            ).unsqueeze(0).to(self._device)
-            
-        # 프리셋 이름인 경우
-        if voice.lower() in self.SPEAKER_IDS:
-            idx = self.SPEAKER_IDS[voice.lower()] % len(self._all_embeddings)
-            return torch.tensor(
-                self._all_embeddings[idx]["xvector"]
-            ).unsqueeze(0).to(self._device)
+            ).unsqueeze(0).to(self._device, dtype=target_dtype)
             
         # 기본값
         return self.speaker_embeddings

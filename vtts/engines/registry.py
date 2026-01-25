@@ -171,18 +171,7 @@ def auto_register_engines():
     except ImportError as e:
         logger.debug(f"Bark engine not available: {e}")
     
-    try:
-        from vtts.engines.parler import ParlerTTSEngine
-        EngineRegistry.register(
-            "parler",
-            ParlerTTSEngine,
-            model_patterns=[
-                "parler-tts/*",
-                "*parler*"
-            ]
-        )
-    except ImportError as e:
-        logger.debug(f"Parler-TTS engine not available: {e}")
+    # Parler-TTS는 transformers 4.46.1 요구로 제외 (호환성 문제)
     
     try:
         from vtts.engines.speecht5 import SpeechT5Engine
