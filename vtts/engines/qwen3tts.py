@@ -98,16 +98,19 @@ class Qwen3TTSEngine(BaseTTSEngine):
             with open(target_file, "r", encoding="utf-8") as f:
                 content = f.read()
             
+            # 이미 패치되었는지 확인
+            if "# patched for transformers" in content:
+                return
+            
             patched = False
             
-            # 패치 1: @check_model_inputs() -> @check_model_inputs
+            # @check_model_inputs() 데코레이터를 주석 처리
+            # (transformers 4.57+에서 inputs_embeds 인자 호환성 문제)
             if "@check_model_inputs()" in content:
-                content = content.replace("@check_model_inputs()", "@check_model_inputs")
-                patched = True
-            
-            # 패치 2: @check_model_inputs 데코레이터 완전 제거 (inputs_embeds 호환성)
-            if "@check_model_inputs\n" in content:
-                content = content.replace("@check_model_inputs\n", "")
+                content = content.replace(
+                    "    @check_model_inputs()",
+                    "    # @check_model_inputs()  # patched for transformers 4.57+"
+                )
                 patched = True
             
             if patched:

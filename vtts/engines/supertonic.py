@@ -62,6 +62,51 @@ class SupertonicEngine(BaseTTSEngine):
                 pass
             return "cpu"
         return device.lower()
+    
+    def _ensure_onnxruntime_cuda(self) -> bool:
+        """ONNX Runtime CUDA 지원을 확인하고 필요시 설치합니다."""
+        try:
+            import onnxruntime as ort
+            providers = ort.get_available_providers()
+            
+            if "CUDAExecutionProvider" in providers:
+                return True
+            
+            # CUDA가 요청되었지만 CUDAExecutionProvider가 없는 경우
+            if self._device == "cuda":
+                logger.warning("CUDAExecutionProvider not available. Installing onnxruntime-gpu for CUDA 12...")
+                
+                import subprocess
+                import sys
+                
+                # 기존 onnxruntime 제거 후 CUDA 12 버전 설치
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "uninstall", "onnxruntime", "onnxruntime-gpu", "-y", "-q"],
+                    capture_output=True
+                )
+                
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "onnxruntime-gpu",
+                     "--extra-index-url", "https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/",
+                     "-q"],
+                    capture_output=True,
+                    text=True
+                )
+                
+                if result.returncode == 0:
+                    logger.info("onnxruntime-gpu (CUDA 12) installed successfully")
+                    # 모듈 리로드
+                    import importlib
+                    importlib.reload(ort)
+                    return "CUDAExecutionProvider" in ort.get_available_providers()
+                else:
+                    logger.warning(f"Failed to install onnxruntime-gpu: {result.stderr}")
+                    return False
+            
+            return False
+        except Exception as e:
+            logger.debug(f"ONNX Runtime CUDA check failed: {e}")
+            return False
         
     def load_model(self) -> None:
         """모델을 로드합니다."""
@@ -71,6 +116,10 @@ class SupertonicEngine(BaseTTSEngine):
         
         logger.info(f"Loading Supertonic model: {self.model_id}")
         logger.info("This will download ~260MB of model assets on first run")
+        
+        # CUDA 요청 시 onnxruntime-gpu 확인/설치
+        if self._device == "cuda":
+            self._ensure_onnxruntime_cuda()
         
         try:
             # HuggingFace에서 모델 다운로드
