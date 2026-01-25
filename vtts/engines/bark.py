@@ -137,10 +137,10 @@ class BarkEngine(BaseTTSEngine):
                 return f"v2/{lang_code}_speaker_{voice}"
             return voice
             
-        # 기본값: 언어별 speaker_0
+        # 기본값: 언어별 speaker_0 (v2 형식)
         lang_code = language[:2] if len(language) >= 2 else "en"
-        if lang_code in self.VOICE_PRESETS:
-            return self.VOICE_PRESETS[lang_code][0]
+        if lang_code in ["en", "ko", "zh", "ja", "de", "es", "fr", "hi", "it", "pl", "pt", "ru", "tr"]:
+            return f"v2/{lang_code}_speaker_0"
         return None
         
     def synthesize(self, request: TTSRequest) -> TTSOutput:
@@ -157,11 +157,18 @@ class BarkEngine(BaseTTSEngine):
             
             if voice_preset:
                 logger.debug(f"Using voice preset: {voice_preset}")
-                inputs = self.processor(
-                    request.text,
-                    voice_preset=voice_preset,
-                    return_tensors="pt"
-                )
+                try:
+                    inputs = self.processor(
+                        request.text,
+                        voice_preset=voice_preset,
+                        return_tensors="pt"
+                    )
+                except Exception as e:
+                    logger.warning(f"Voice preset failed ({voice_preset}), using default: {e}")
+                    inputs = self.processor(
+                        request.text,
+                        return_tensors="pt"
+                    )
             else:
                 inputs = self.processor(
                     request.text,
@@ -208,6 +215,26 @@ class BarkEngine(BaseTTSEngine):
     def supported_languages(self) -> list:
         """지원 언어"""
         return self.SUPPORTED_LANGUAGES.copy()
+        
+    @property
+    def supported_voices(self) -> list:
+        """지원 음성 목록"""
+        return self.get_available_voices()
+        
+    @property
+    def default_sample_rate(self) -> int:
+        """기본 샘플링 레이트"""
+        return self.sample_rate
+        
+    @property
+    def supports_streaming(self) -> bool:
+        """스트리밍 지원 여부"""
+        return False
+        
+    @property
+    def supports_zero_shot(self) -> bool:
+        """Zero-shot 음성 복제 지원 여부"""
+        return False  # Bark는 프리셋 음성만 지원
 
 
 # 엔진 등록
