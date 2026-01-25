@@ -98,14 +98,21 @@ class Qwen3TTSEngine(BaseTTSEngine):
             with open(target_file, "r", encoding="utf-8") as f:
                 content = f.read()
             
-            # @check_model_inputs() -> @check_model_inputs 패치
+            patched = False
+            
+            # 패치 1: @check_model_inputs() -> @check_model_inputs
             if "@check_model_inputs()" in content:
-                patched_content = content.replace(
-                    "@check_model_inputs()", 
-                    "@check_model_inputs"
-                )
+                content = content.replace("@check_model_inputs()", "@check_model_inputs")
+                patched = True
+            
+            # 패치 2: @check_model_inputs 데코레이터 완전 제거 (inputs_embeds 호환성)
+            if "@check_model_inputs\n" in content:
+                content = content.replace("@check_model_inputs\n", "")
+                patched = True
+            
+            if patched:
                 with open(target_file, "w", encoding="utf-8") as f:
-                    f.write(patched_content)
+                    f.write(content)
                 logger.info("Applied qwen-tts patch for transformers 4.57+ compatibility")
         except Exception as e:
             logger.debug(f"qwen-tts patch skipped: {e}")
