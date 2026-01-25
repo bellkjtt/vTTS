@@ -186,7 +186,7 @@ def auto_register_engines():
     except ImportError as e:
         logger.debug(f"SpeechT5 engine not available: {e}")
     
-    # VibeVoice: GitHub disabled 상태로 보류 (microsoft/VibeVoice-Realtime-0.5B)
+    # VibeVoice: Voice Preset 파일 필요, 추후 지원 예정 (microsoft/VibeVoice-Realtime-0.5B)
     
     logger.info(f"Auto-registered {len(EngineRegistry.list_engines())} TTS engines")
 
