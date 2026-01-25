@@ -140,9 +140,8 @@ chatterbox = [
 ]
 
 # KaniTTS - High-speed conversational TTS
-# nemo-toolkit 2.3.0 사용 (transformers>=4.51.0 호환)
+# kani-tts는 엔진에서 --no-deps로 자동 설치, nemo-toolkit 2.3.0 사용
 kanitts = [
-    "kani-tts>=0.1.0",
     "nemo-toolkit[tts]==2.3.0",
     "datasets>=3.0.0",
 ]
@@ -199,8 +198,7 @@ all = [
     "pykakasi>=2.3.0",
     "pyloudnorm",
     "omegaconf",
-    # KaniTTS (nemo-toolkit 대용량 주의)
-    "kani-tts>=0.1.0",
+    # KaniTTS (kani-tts는 엔진에서 --no-deps로 자동 설치)
     "nemo-toolkit[tts]==2.3.0",
     "datasets>=3.0.0",
 ]
