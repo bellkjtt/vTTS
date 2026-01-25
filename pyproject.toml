@@ -89,7 +89,7 @@ gptsovits = [
     "funasr>=1.0.27",
     "peft>=0.10.0,<0.18.0",
     "ffmpeg-python",
-    "torchcodec",
+    "torchcodec>=0.2.0",
     "pytorch_lightning>=2.0.0",  # AR 모델 의존성
     
     # f5_tts (v3) dependencies
@@ -167,6 +167,7 @@ all = [
     "funasr>=1.0.27",
     "peft>=0.10.0,<0.18.0",
     "ffmpeg-python",
+    "torchcodec>=0.2.0",
     "pytorch_lightning>=2.0.0",
     # GPT-SoVITS (f5_tts v3)
     "x_transformers",
