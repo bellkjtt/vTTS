@@ -158,6 +158,19 @@ def auto_register_engines():
     except ImportError as e:
         logger.debug(f"KaniTTS engine not available: {e}")
     
+    try:
+        from vtts.engines.bark import BarkEngine
+        EngineRegistry.register(
+            "bark",
+            BarkEngine,
+            model_patterns=[
+                "suno/bark*",
+                "*bark*"
+            ]
+        )
+    except ImportError as e:
+        logger.debug(f"Bark engine not available: {e}")
+    
     logger.info(f"Auto-registered {len(EngineRegistry.list_engines())} TTS engines")
 
 
