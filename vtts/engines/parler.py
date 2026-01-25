@@ -72,6 +72,9 @@ class ParlerTTSEngine(BaseTTSEngine):
         logger.info("This may take a while on first run (~2GB download)")
         
         try:
+            # parler-tts 자동 설치 확인
+            self._ensure_parler_tts_installed()
+            
             from parler_tts import ParlerTTSForConditionalGeneration
             from transformers import AutoTokenizer
             
@@ -99,20 +102,25 @@ class ParlerTTSEngine(BaseTTSEngine):
             logger.info(f"Device: {self._device}")
             logger.info(f"Sample rate: {self.sample_rate} Hz")
             
-        except ImportError:
-            # parler_tts 패키지 미설치 시 설치
-            logger.warning("parler-tts package not found. Installing...")
-            import subprocess
-            import sys
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install", "parler-tts", "-q"],
-                check=True
-            )
-            # 재시도
-            self.load_model()
         except Exception as e:
             logger.error(f"Failed to load Parler-TTS model: {e}")
             raise
+            
+    def _ensure_parler_tts_installed(self) -> None:
+        """parler-tts 패키지 설치 확인 및 자동 설치"""
+        try:
+            import parler_tts
+        except ImportError:
+            logger.warning("parler-tts package not found. Installing...")
+            import subprocess
+            import sys
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "parler-tts", "-q"],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"Failed to install parler-tts: {result.stderr}")
             
     def unload_model(self) -> None:
         """모델 언로드"""
