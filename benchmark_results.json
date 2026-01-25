@@ -1,0 +1,268 @@
+{
+  "test_date": "2026-01-25T13:32:48.702996",
+  "environment": {
+    "python": "3.11.11",
+    "torch": "2.10.0+cu128",
+    "cuda": "12.8",
+    "gpu": "NVIDIA GeForce RTX 3090 Ti"
+  },
+  "test_config": {
+    "num_runs": 5,
+    "test_text_ko": "안녕하세요, 저는 인공지능 음성 합성 시스템입니다. 오늘 날씨가 정말 좋네요.",
+    "test_text_en": "Hello, I am an artificial intelligence speech synthesis system. The weather is really nice today."
+  },
+  "engines": {
+    "Supertonic": {
+      "model_id": "Supertone/supertonic-2",
+      "language": "ko",
+      "device": "cuda",
+      "runs": [
+        {
+          "run": 1,
+          "inference_time_ms": 172.9,
+          "audio_length_s": 7.8,
+          "rtf": 0.0222
+        },
+        {
+          "run": 2,
+          "inference_time_ms": 33.3,
+          "audio_length_s": 7.8,
+          "rtf": 0.0043
+        },
+        {
+          "run": 3,
+          "inference_time_ms": 32.5,
+          "audio_length_s": 7.8,
+          "rtf": 0.0042
+        },
+        {
+          "run": 4,
+          "inference_time_ms": 32.4,
+          "audio_length_s": 7.8,
+          "rtf": 0.0042
+        },
+        {
+          "run": 5,
+          "inference_time_ms": 32.4,
+          "audio_length_s": 7.8,
+          "rtf": 0.0041
+        }
+      ],
+      "average": {
+        "inference_time_ms": 60.7,
+        "audio_length_s": 7.8,
+        "rtf": 0.0078
+      }
+    },
+    "Qwen3-TTS": {
+      "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+      "language": "ko",
+      "device": "cuda",
+      "runs": [
+        {
+          "run": 1,
+          "inference_time_ms": 4674.3,
+          "audio_length_s": 7.42,
+          "rtf": 0.6302
+        },
+        {
+          "run": 2,
+          "inference_time_ms": 5193.1,
+          "audio_length_s": 8.22,
+          "rtf": 0.632
+        },
+        {
+          "run": 3,
+          "inference_time_ms": 4472.3,
+          "audio_length_s": 7.1,
+          "rtf": 0.6302
+        },
+        {
+          "run": 4,
+          "inference_time_ms": 5349.5,
+          "audio_length_s": 8.46,
+          "rtf": 0.6326
+        },
+        {
+          "run": 5,
+          "inference_time_ms": 4540.0,
+          "audio_length_s": 7.18,
+          "rtf": 0.6326
+        }
+      ],
+      "average": {
+        "inference_time_ms": 4845.8,
+        "audio_length_s": 7.68,
+        "rtf": 0.6315
+      }
+    },
+    "GPT-SoVITS": {
+      "model_id": "kevinwang676/GPT-SoVITS-v3",
+      "language": "ko",
+      "device": "cuda",
+      "runs": [
+        {
+          "run": 1,
+          "inference_time_ms": 2922.1,
+          "audio_length_s": 7.87,
+          "rtf": 0.3715
+        },
+        {
+          "run": 2,
+          "inference_time_ms": 2888.5,
+          "audio_length_s": 8.99,
+          "rtf": 0.3214
+        },
+        {
+          "run": 3,
+          "inference_time_ms": 2800.3,
+          "audio_length_s": 7.74,
+          "rtf": 0.3619
+        },
+        {
+          "run": 4,
+          "inference_time_ms": 2786.7,
+          "audio_length_s": 7.5,
+          "rtf": 0.3714
+        },
+        {
+          "run": 5,
+          "inference_time_ms": 2805.0,
+          "audio_length_s": 8.06,
+          "rtf": 0.3481
+        }
+      ],
+      "average": {
+        "inference_time_ms": 2840.5,
+        "audio_length_s": 8.03,
+        "rtf": 0.3549
+      }
+    },
+    "CosyVoice": {
+      "model_id": "FunAudioLLM/CosyVoice2-0.5B",
+      "language": "ko",
+      "device": "cuda",
+      "runs": [
+        {
+          "run": 1,
+          "inference_time_ms": 7984.5,
+          "audio_length_s": 23.2,
+          "rtf": 0.3442
+        },
+        {
+          "run": 2,
+          "inference_time_ms": 8133.2,
+          "audio_length_s": 23.2,
+          "rtf": 0.3506
+        },
+        {
+          "run": 3,
+          "inference_time_ms": 8028.8,
+          "audio_length_s": 23.2,
+          "rtf": 0.3461
+        },
+        {
+          "run": 4,
+          "inference_time_ms": 7997.6,
+          "audio_length_s": 23.2,
+          "rtf": 0.3447
+        },
+        {
+          "run": 5,
+          "inference_time_ms": 8025.4,
+          "audio_length_s": 23.2,
+          "rtf": 0.3459
+        }
+      ],
+      "average": {
+        "inference_time_ms": 8033.9,
+        "audio_length_s": 23.2,
+        "rtf": 0.3463
+      }
+    },
+    "Chatterbox": {
+      "model_id": "ResembleAI/chatterbox",
+      "language": "en",
+      "device": "cuda",
+      "runs": [
+        {
+          "run": 1,
+          "inference_time_ms": 1426.5,
+          "audio_length_s": 5.12,
+          "rtf": 0.2786
+        },
+        {
+          "run": 2,
+          "inference_time_ms": 1360.5,
+          "audio_length_s": 4.8,
+          "rtf": 0.2834
+        },
+        {
+          "run": 3,
+          "inference_time_ms": 1469.4,
+          "audio_length_s": 5.32,
+          "rtf": 0.2762
+        },
+        {
+          "run": 4,
+          "inference_time_ms": 1405.8,
+          "audio_length_s": 5.0,
+          "rtf": 0.2812
+        },
+        {
+          "run": 5,
+          "inference_time_ms": 1363.9,
+          "audio_length_s": 4.88,
+          "rtf": 0.2795
+        }
+      ],
+      "average": {
+        "inference_time_ms": 1405.2,
+        "audio_length_s": 5.02,
+        "rtf": 0.2798
+      }
+    },
+    "KaniTTS": {
+      "model_id": "nineninesix/kani-tts-370m",
+      "language": "ko",
+      "device": "cuda",
+      "runs": [
+        {
+          "run": 1,
+          "inference_time_ms": 2224.8,
+          "audio_length_s": 7.12,
+          "rtf": 0.3125
+        },
+        {
+          "run": 2,
+          "inference_time_ms": 2313.3,
+          "audio_length_s": 7.52,
+          "rtf": 0.3076
+        },
+        {
+          "run": 3,
+          "inference_time_ms": 2428.5,
+          "audio_length_s": 7.92,
+          "rtf": 0.3066
+        },
+        {
+          "run": 4,
+          "inference_time_ms": 2350.6,
+          "audio_length_s": 7.68,
+          "rtf": 0.3061
+        },
+        {
+          "run": 5,
+          "inference_time_ms": 2223.7,
+          "audio_length_s": 7.28,
+          "rtf": 0.3054
+        }
+      ],
+      "average": {
+        "inference_time_ms": 2308.2,
+        "audio_length_s": 7.5,
+        "rtf": 0.3076
+      }
+    }
+  }
+}
