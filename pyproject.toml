@@ -1,6 +1,6 @@
 [project]
 name = "vtts"
-version = "0.1.0-beta"
+version = "0.2.0"
 description = "Universal TTS Serving System - vLLM for Text-to-Speech"
 authors = [
     {name = "vTTS Contributors"}
@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 keywords = ["tts", "text-to-speech", "serving", "huggingface", "ai"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.11",

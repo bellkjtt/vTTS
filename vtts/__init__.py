@@ -3,7 +3,7 @@
 vLLM for Text-to-Speech
 """
 
-__version__ = "0.1.0-beta"
+__version__ = "0.2.0"
 
 import os
 import sys
